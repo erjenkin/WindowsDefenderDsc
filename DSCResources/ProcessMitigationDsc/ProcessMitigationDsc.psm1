@@ -19,7 +19,7 @@ function Get-TargetResource
 
     $results = @()
     $mitigationsToCheck = $Enable + $Disable
-    $policyStrings = [Microsoft.Samples.PowerShell.Commands.AppMitigations]::availablePolicyStrings
+    $policyStrings = [Microsoft.Samples.PowerSHell.Commands.AppMitigations].GetProperties().Name
 
     if ($MitigationTarget -eq 'System')
     {
@@ -32,14 +32,23 @@ function Get-TargetResource
 
     foreach ($mitigation in $mitigationsToCheck)
     {
-        foreach ($policy in $policyStrings)
+        if ($null -ne $currentMitigation.$mitigation.Enable)
         {
-            if ($null -ne $currentMitigation.$policy.$mitigation)
+            $results += @{
+                Mitigation = $mitigation
+                Value      = $currentMitigation.$mitigation.Enable
+            }
+        }
+        else
+        {
+            foreach ($policy in $policyStrings)
             {
-                $results += @{
-                    Policy     = $policy
-                    Mitigation = $mitigation
-                    Value      = $currentMitigation.$policy.$mitigation
+                if ($null -ne $currentMitigation.$policy.$mitigation )
+                {
+                    $results += @{
+                        Mitigation = $mitigation
+                        Value      = $currentMitigation.$policy.$mitigation
+                    }
                 }
             }
         }
@@ -48,7 +57,8 @@ function Get-TargetResource
     $returnValue = @{
         MitigationTarget = $MitigationTarget
         Enable           = ( $results | Where-Object -FilterScript { $PSItem.Value -eq 'ON' } ).Mitigation
-        Disable          = ( $results | Where-Object -FilterScript { $PSItem.Value -ne 'ON' } ).Mitigation
+        Disable          = ( $results | Where-Object -FilterScript { $PSItem.Value -eq 'OFF' } ).Mitigation
+        Default          = ( $results | Where-Object -FilterScript { $PSItem.Value -eq 'NOTSET' } ).Mitigation
     }
     return $returnValue
 }
