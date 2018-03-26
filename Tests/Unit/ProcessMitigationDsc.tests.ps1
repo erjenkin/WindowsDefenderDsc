@@ -35,12 +35,18 @@ try
                 Enable = 'OFF'
                 BlockRemoteImageLoads = 'NOTSET'
             }
+            DEP   = @{
+                Enable           = 'ON'
+                EmulateAtlThunks = 'NOTSET'
+            }
+            ASLR  = @{
+                BottomUp = 'OFF'
+            }
         }
         Describe 'Get-TargetResource' {
             Context 'MitigationTarget is System' {
-
                 Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
-                $result = Get-TargetResource -MitigationTarget SYSTEM -Enable TerminateOnError -Disable SEHOP,BlockRemoteImageLoads
+                $result = Get-TargetResource -MitigationTarget SYSTEM -Enable TerminateOnError -Disable SEHOP, BlockRemoteImageLoads
 
                 It 'Should return expected values for Enabled' {
                     $result.Enable | Should be 'TerminateOnError'
@@ -55,14 +61,39 @@ try
                 }
             }
 
-            Context 'MitigationTarget is' {
-                It 'Should ....test-description' {
-                    # test-code
+            Context 'MitigationTarget is not System' {
+                Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
+                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
+                It 'Should return expected values for Enabled' {
+                    $result.Enable | Should be 'DEP'
+                }
+                It 'Should return expected values for Disabled' {
+                    $result.Disable | Should Be 'BottomUp'
+                }
+
+                It 'Should return expected values for Default' {
+                    $result.Default | Should Be 'BlockRemoteImageLoads'
+                }
+            }
+            
+            Context 'Test when multiple Mitigations are returned per property' {
+                Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
+                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads, SEHOP, BlockRemoteImageLoads, TerminateOnError
+                It 'Should return expected values for Enabled' {
+                    $result.Enable | Should be 'TerminateOnError', 'DEP'
+                }
+                
+                It 'Should return expected values for Disabled' {
+                    $result.Disable | Should be 'SEHOP', 'BottomUp'
+                }
+                
+                It 'Should return expected values for Default' {
+                    $result.Default | Should be 'EmulateAtlThunks','BlockRemoteImageLoads'
                 }
             }
         }
 
-        Describe '<Test-name>' {
+        Describe 'Test-TargetResource' {
             Context '<Context-description>' {
                 It 'Should ...test-description' {
                     # test-code
