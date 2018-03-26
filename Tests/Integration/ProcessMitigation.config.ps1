@@ -2,7 +2,7 @@
 
 $processMitgationParameters = @{
     MitigationTarget = 'SYSTEM'
-    Enable           = 'DEP'
+    Enable           = 'DEP','SEHOP'
     Disable          = 'ForceRelocateImages'
 }
 

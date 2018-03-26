@@ -17,9 +17,11 @@ function Get-TargetResource
         $Disable
     )
 
+    Import-Module -Name ProcessMitigations -Verbose:0
+
     $results = @()
     $mitigationsToCheck = $Enable + $Disable
-    $policyStrings = [Microsoft.Samples.PowerSHell.Commands.AppMitigations].GetProperties().Name
+    $policyStrings = [Microsoft.Samples.PowerShell.Commands.AppMitigations].GetProperties().Name
 
     if ($MitigationTarget -eq 'System')
     {

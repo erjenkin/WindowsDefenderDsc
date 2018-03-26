@@ -109,7 +109,7 @@ try
             Mock -CommandName 'Get-TargetResource' -MockWith {$mockGetTargetResource}
 
             Context 'Not is a desired state' {
-                
+
                 It 'Should return FALSE when Enable is not in a desired state' {
                     $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP', 'TelemetryOnly'
                     $result | Should Be $false
@@ -145,7 +145,7 @@ try
                 Set-TargetResource -MitigationTarget SYSTEM -Enable DEP
 
                 It 'Should Set SYSTEM' {
-                    Assert-MockCalled Set-ProcessMitigation -Times 1 -ParameterFilter { $System -eq $true} 
+                    Assert-MockCalled Set-ProcessMitigation -Times 1 -ParameterFilter { $System -eq $true }
                 }
             }
 
