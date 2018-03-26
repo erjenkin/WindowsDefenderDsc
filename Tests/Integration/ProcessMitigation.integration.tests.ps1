@@ -1,20 +1,6 @@
-<#
-.Synopsis
-   Template for creating DSC Resource Integration Tests
-.DESCRIPTION
-   To Use:
-     1. Copy to \Tests\Integration\ folder and rename <ResourceName>.Integration.tests.ps1 (e.g. MSFT_xNetworking.Integration.tests.ps1)
-     2. Customize TODO sections.
-     3. Create test DSC Configuration file <ResourceName>.config.ps1 (e.g. MSFT_xNetworking.config.ps1) from integration_config_template.ps1 file.
 
-.NOTES
-   Code in HEADER, FOOTER and DEFAULT TEST regions are standard and may be moved into
-   DSCResource.Tools in Future and therefore should not be altered if possible.
-#>
-
-# TODO: Customize these parameters...
-$script:DSCModuleName = 'ProcessMitigationDsc' # Example xNetworking
-$script:DSCResourceName = 'ProcessMitigationDsc' # Example MSFT_xFirewall
+$script:DSCModuleName = 'ProcessMitigationDsc'
+$script:DSCResourceName = 'ProcessMitigation'
 
 #region HEADER
 # Integration Test Template Version: 1.2.0
