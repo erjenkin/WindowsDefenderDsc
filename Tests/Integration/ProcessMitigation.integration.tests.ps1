@@ -13,8 +13,8 @@
 #>
 
 # TODO: Customize these parameters...
-$script:DSCModuleName = '<ModuleName>' # Example xNetworking
-$script:DSCResourceName = '<ResourceName>' # Example MSFT_xFirewall
+$script:DSCModuleName = 'ProcessMitigationDsc' # Example xNetworking
+$script:DSCResourceName = 'ProcessMitigationDsc' # Example MSFT_xFirewall
 
 #region HEADER
 # Integration Test Template Version: 1.2.0
@@ -33,9 +33,6 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 #endregion
 
-# TODO: Other Init Code Goes Here...
-
-# Using try/finally to always cleanup.
 try
 {
     #region Integration Tests
@@ -68,8 +65,12 @@ try
         }
         #endregion
 
+        $currentProcessMitgation = Get-DscConfiguration
         It 'Should have set the resource and all the parameters should match' {
-            # TODO: Validate the Config was Set Correctly Here...
+            foreach ( $key in $processMitgationParameters.Keys )
+            {
+                $processMitgationParameters.$key | Should Be $currentProcessMitgation.$key
+            }
         }
     }
     #endregion
@@ -77,11 +78,5 @@ try
 }
 finally
 {
-    #region FOOTER
-
     Restore-TestEnvironment -TestEnvironment $TestEnvironment
-
-    #endregion
-
-    # TODO: Other Optional Cleanup Code Goes Here...
 }

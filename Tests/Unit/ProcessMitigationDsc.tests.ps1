@@ -13,7 +13,7 @@ Import-Module -Name (Join-Path -Path $script:moduleRoot -ChildPath (Join-Path -P
 
 $TestEnvironment = Initialize-TestEnvironment `
     -DSCModuleName 'ProcessMitigationDsc' `
-    -DSCResourceName 'ProcessMitigationDsc' `
+    -DSCResourceName 'ProcessMitigation' `
     -TestType Unit
 
 #endregion HEADER
@@ -26,7 +26,7 @@ function Invoke-TestCleanup {
 # Begin Testing
 try
 {
-    InModuleScope 'ProcessMitigationDsc' {
+    InModuleScope 'ProcessMitigation' {
         $getProcessMitigationMock = @{
             Heap = @{
                 TerminateOnError = 'ON'
