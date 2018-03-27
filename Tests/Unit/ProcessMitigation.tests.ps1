@@ -43,8 +43,10 @@ try
                 BottomUp = 'OFF'
             }
         }
+
         Describe 'Get-TargetResource' {
             Context 'MitigationTarget is System' {
+
                 Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
                 $result = Get-TargetResource -MitigationTarget SYSTEM -Enable TerminateOnError -Disable SEHOP, BlockRemoteImageLoads
 
@@ -77,7 +79,7 @@ try
                     $result.Default | Should Be 'BlockRemoteImageLoads'
                 }
             }
-            
+
             Context 'Test when multiple Mitigations are returned per property' {
 
                 Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
@@ -93,6 +95,38 @@ try
                 
                 It 'Should return expected values for Default' {
                     $result.Default | Should be 'EmulateAtlThunks', 'BlockRemoteImageLoads'
+                }
+            }
+
+            Context 'Return hashtable should not have empty elements' {
+
+                Mock -CommandName Get-ProcessMitigation
+
+                It 'Enable Should be NULL' {
+                    $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
+                    $null -eq $result.Enable | Should Be $true
+                }
+
+                It 'Disable Should be NULL' {
+                    $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
+                    $null -eq $result.Disable | Should Be $true
+                }
+
+                It 'Default Should be NULL' {
+                    $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BottomUp
+                    $null -eq $result.Default | Should Be $true
+                }
+            }
+
+            Context 'Return hashtable values should be array' {
+
+                Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
+                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
+
+                It 'Should be an array' {
+                    $result.Enable  -is [array] | Should Be $true
+                    $result.Disable -is [array] | Should Be $true
+                    $result.Default -is [array] | Should Be $true
                 }
             }
         }

@@ -56,11 +56,15 @@ function Get-TargetResource
         }
     }
 
+        $enableResults  = Get-ProcessMitgationResult -RawResult $results -ResultType Enable
+        $disableResults = Get-ProcessMitgationResult -RawResult $results -ResultType Disable
+        $defaultResults = Get-ProcessMitgationResult -RawResult $results -ResultType Default
+
     $returnValue = @{
         MitigationTarget = $MitigationTarget
-        Enable           = ( $results | Where-Object -FilterScript { $PSItem.Value -eq 'ON' } ).Mitigation
-        Disable          = ( $results | Where-Object -FilterScript { $PSItem.Value -eq 'OFF' } ).Mitigation
-        Default          = ( $results | Where-Object -FilterScript { $PSItem.Value -eq 'NOTSET' } ).Mitigation
+        Enable           = [string[]]$enableResults
+        Disable          = [string[]]$disableResults
+        Default          = [string[]]$defaultResults
     }
     return $returnValue
 }
@@ -136,6 +140,49 @@ function Test-TargetResource
     }
 
     return $inDesiredState
+}
+
+<#
+    .SYNOPSIS
+        Ensure the results are not an empty collection. Get-DscConfiguration will fail if the return result do not match the schema.mof
+    .PARAMETER RawResult
+        A hastable of the results to filter
+    .PARAMETER ResultType
+        Specifies if we want to filter for mitgations policies that are Enable, Disable, or in the Default status.
+#>
+function Get-ProcessMitgationResult
+{
+    [CmdletBinding()]
+    [OutputType([System.String[]])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [hashtable[]]
+        $RawResult,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('Enable', 'Disable', 'Default')]
+        [string]
+        $ResultType
+    )
+
+    $resultTypeEnum = @{
+        Enable  = 'ON'
+        Disable = 'OFF'
+        Default = 'NOTSET'
+    }
+
+    $result = @( ( $results | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] } ).Mitigation )
+
+    if ( [string]::IsNullOrEmpty($result) )
+    {
+        return $null
+    }
+    else
+    {
+        return $result
+    }
 }
 
 Export-ModuleMember -Function *-TargetResource
