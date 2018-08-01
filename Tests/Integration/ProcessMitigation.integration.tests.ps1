@@ -1,5 +1,5 @@
 
-$script:DSCModuleName = 'ProcessMitigationDsc'
+$script:DSCModuleName = 'WindowsDefenderDsc'
 $script:DSCResourceName = 'ProcessMitigation'
 
 #region HEADER

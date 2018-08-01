@@ -7,4 +7,3 @@ class ProcessMitigation : OMI_BaseResource
     [Write, Description("Comma separated list of mitigations to disable. Disable list takes priority over enable list. If specified in both, it will be disabled.")] String Disable[];
     [Read, Description("List the mitigation policies that are currently set to the default value.")] String Default[];
 };
-

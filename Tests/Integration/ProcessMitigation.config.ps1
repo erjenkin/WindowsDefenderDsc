@@ -8,7 +8,7 @@ $processMitgationParameters = @{
 
 configuration ProcessMitigation_config {
 
-    Import-DscResource -ModuleName 'ProcessMitigationDsc'
+    Import-DscResource -ModuleName 'WindowsDefenderDsc'
 
     node localhost {
         ProcessMitigation Integration_Test
