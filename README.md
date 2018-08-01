@@ -1,5 +1,9 @@
-# ProcessMitigationDsc
-A DSC resource to manage process mitigations
+# WindowsDefenderDsc
+A collection of DSC resources to manage security mitigations in Windows Defender Security Center
+
+## How to Contribute
+
+Please check out common DSC Resources [contributing guidelines](https://github.com/PowerShell/DscResource.Kit/blob/master/CONTRIBUTING.md).
 
 ## Resources
 
