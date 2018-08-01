@@ -1,6 +1,10 @@
+$modulePath = Join-Path -Path (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent) -ChildPath 'Modules'
 
+# Import the Helper Module
+Import-Module -Name (Join-Path -Path $modulePath `
+            -ChildPath 'WindowsDefenderDsc.ResourceHelper.psm1')
 
-$script:localizedData = Get-LocalizedData -ResourceName 'ProcessMitigation'
+$script:localizedData = Get-LocalizedData -ResourceName 'ProcessMitigation' -ResourcePath (Split-Path -Parent $Script:MyInvocation.MyCommand.Path)
 
 function Get-TargetResource
 {
@@ -177,7 +181,7 @@ function Get-ProcessMitgationResult
         Default = 'NOTSET'
     }
 
-    $result = @( ( $results | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] } ).Mitigation )
+    $result = @( ( $RawResult | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] } ).Mitigation )
 
     if ( [string]::IsNullOrEmpty($result) )
     {
@@ -187,60 +191,6 @@ function Get-ProcessMitgationResult
     {
         return $result
     }
-}
-
-<#
-    .SYNOPSIS
-        Retrieves the localized string data based on the machine's culture.
-        Falls back to en-US strings if the machine's culture is not supported.
-
-    .PARAMETER ResourceName
-        The name of the resource as it appears before '.strings.psd1' of the localized string file.        
-#>
-function Get-LocalizedData
-{
-    [OutputType([String])]
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true, ParameterSetName = 'resource')]
-        [ValidateNotNullOrEmpty()]
-        [String]
-        $ResourceName,
-
-        [Parameter(Mandatory = $true, ParameterSetName = 'helper')]
-        [ValidateNotNullOrEmpty()]
-        [String]
-        $HelperName
-    )
-
-    # With the helper module just update the name and path variables as if it were a resource. 
-    if ($PSCmdlet.ParameterSetName -eq 'helper')
-    {
-        $resourceDirectory = $PSScriptRoot
-        $ResourceName = $HelperName
-    }
-    else 
-    {
-        # Step up one additional level to build the correct path to the resource culture.
-        $resourceDirectory = Join-Path -Path ( Split-Path $PSScriptRoot -Parent ) `
-                                       -ChildPath $ResourceName
-    }
-
-    $localizedStringFileLocation = Join-Path -Path $resourceDirectory -ChildPath $PSUICulture
-
-    if (-not (Test-Path -Path $localizedStringFileLocation))
-    {
-        # Fallback to en-US
-        $localizedStringFileLocation = Join-Path -Path $resourceDirectory -ChildPath 'en-US'
-    }
-
-    Import-LocalizedData `
-        -BindingVariable 'localizedData' `
-        -FileName "$ResourceName.strings.psd1" `
-        -BaseDirectory $localizedStringFileLocation
-
-    return $localizedData
 }
 
 Export-ModuleMember -Function *-TargetResource

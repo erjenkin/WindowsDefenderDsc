@@ -64,7 +64,6 @@ try
             }
 
             Context 'MitigationTarget is not System' {
-
                 Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
@@ -81,25 +80,23 @@ try
             }
 
             Context 'Test when multiple Mitigations are returned per property' {
-
                 Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
-                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads, SEHOP, BlockRemoteImageLoads, TerminateOnError
+                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads, SEHOP, EmulateAtlThunks, TerminateOnError
 
                 It 'Should return expected values for Enabled' {
-                    $result.Enable | Should be 'TerminateOnError', 'DEP'
+                    ($result.Enable | Sort-Object) | Should be ('DEP', 'TerminateOnError' | Sort-Object)
                 }
                 
                 It 'Should return expected values for Disabled' {
-                    $result.Disable | Should be 'SEHOP', 'BottomUp'
+                    ($result.Disable | Sort-Object) | Should be ('BottomUp', 'SEHOP' | Sort-Object)
                 }
                 
                 It 'Should return expected values for Default' {
-                    $result.Default | Should be 'EmulateAtlThunks', 'BlockRemoteImageLoads'
+                    ($result.Default | Sort-Object) | Should be ('EmulateAtlThunks', 'BlockRemoteImageLoads' | Sort-Object)
                 }
             }
 
             Context 'Return hashtable should not have empty elements' {
-
                 Mock -CommandName Get-ProcessMitigation
 
                 It 'Enable Should be NULL' {
@@ -119,7 +116,6 @@ try
             }
 
             Context 'Return hashtable values should be array' {
-
                 Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
@@ -132,7 +128,6 @@ try
         }
 
         Describe 'Test-TargetResource' {
-
             $mockGetTargetResource = @{
                 MitigationTarget = 'SYSTEM'
                 Enable           = 'DEP', 'TerminateOnError'
@@ -143,7 +138,6 @@ try
             Mock -CommandName 'Get-TargetResource' -MockWith {$mockGetTargetResource}
 
             Context 'Not is a desired state' {
-
                 It 'Should return FALSE when Enable is not in a desired state' {
                     $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP', 'TelemetryOnly'
                     $result | Should Be $false
