@@ -16,33 +16,7 @@ $TestEnvironment = Initialize-TestEnvironment `
     -DSCResourceName 'ProcessMitigation' `
     -TestType Unit
 
-function Set-ProcessMitigation
-{
-    param
-    (
-        [switch]$System,
-        [string]$Name
-    )
-}
 
-function Get-ProcessMitigation {}
-
-$mockPolicyStrings = @(
-    'Dep'
-    'Aslr'
-    'StrictHandle'
-    'SystemCall'
-    'ExtensionPoint'
-    'DynamicCode'
-    'Cfg'
-    'BinarySignature'
-    'FontDisable'
-    'ImageLoad'
-    'Payload'
-    'SEHOP'
-    'Heap'
-    'ChildProcess'
-)
 
 #endregion HEADER
 
@@ -72,7 +46,34 @@ try
         }
     }
 
-    InModuleScope ProcessMitigation {
+    InModuleScope 'ProcessMitigation' {
+        function Set-ProcessMitigation
+{
+    param
+    (
+        [switch]$System,
+        [string]$Name
+    )
+}
+
+function Get-ProcessMitigation {}
+
+$mockPolicyStrings = @(
+    'Dep'
+    'Aslr'
+    'StrictHandle'
+    'SystemCall'
+    'ExtensionPoint'
+    'DynamicCode'
+    'Cfg'
+    'BinarySignature'
+    'FontDisable'
+    'ImageLoad'
+    'Payload'
+    'SEHOP'
+    'Heap'
+    'ChildProcess'
+)
         Describe 'Get-TargetResource' {
             Context 'MitigationTarget is System' {
 
