@@ -25,11 +25,9 @@ function Get-TargetResource
         $Disable
     )
 
-    Import-Module -Name ProcessMitigations -Verbose:0
-
     $results = @()
     $mitigationsToCheck = $Enable + $Disable
-    $policyStrings = [Microsoft.Samples.PowerShell.Commands.AppMitigations].GetProperties().Name
+    $policyStrings = Get-PolicyString
 
     if ($MitigationTarget -eq 'System')
     {
@@ -106,7 +104,6 @@ function Set-TargetResource
     }
 }
 
-
 function Test-TargetResource
 {
     [CmdletBinding()]
@@ -181,7 +178,7 @@ function Get-ProcessMitgationResult
         Default = 'NOTSET'
     }
 
-    $result = @( ( $RawResult | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] } ).Mitigation )
+    $result = @(($RawResult | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] }).Mitigation)
 
     if ( [string]::IsNullOrEmpty($result) )
     {
@@ -191,6 +188,14 @@ function Get-ProcessMitgationResult
     {
         return $result
     }
+}
+
+function Get-PolicyString
+{
+    param ()
+    
+    Import-Module -Name ProcessMitigations -Verbose:0
+    return [Microsoft.Samples.PowerShell.Commands.AppMitigations].GetProperties().Name
 }
 
 Export-ModuleMember -Function *-TargetResource
