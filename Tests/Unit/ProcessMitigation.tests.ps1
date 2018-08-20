@@ -11,10 +11,14 @@ if ( (-not (Test-Path -Path (Join-Path -Path $script:moduleRoot -ChildPath 'DSCR
 
 Import-Module -Name (Join-Path -Path $script:moduleRoot -ChildPath (Join-Path -Path 'DSCResource.Tests' -ChildPath 'TestHelper.psm1')) -Force
 
+Import-Module -Name $PSScriptRoot\ProcessMitigationsStub.psm1 -Force
+
 $TestEnvironment = Initialize-TestEnvironment `
     -DSCModuleName 'WindowsDefenderDsc' `
     -DSCResourceName 'ProcessMitigation' `
     -TestType Unit
+
+
 
 #endregion HEADER
 
@@ -27,6 +31,23 @@ function Invoke-TestCleanup {
 try
 {
     InModuleScope 'ProcessMitigation' {
+        $mockPolicyStrings = @(
+            'Dep'
+            'Aslr'
+            'StrictHandle'
+            'SystemCall'
+            'ExtensionPoint'
+            'DynamicCode'
+            'Cfg'
+            'BinarySignature'
+            'FontDisable'
+            'ImageLoad'
+            'Payload'
+            'SEHOP'
+            'Heap'
+            'ChildProcess'
+        )
+
         $getProcessMitigationMock = @{
             Heap = @{
                 TerminateOnError = 'ON'
@@ -47,24 +68,26 @@ try
         Describe 'Get-TargetResource' {
             Context 'MitigationTarget is System' {
 
-                Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
+                Mock -CommandName 'Get-ProcessMitigation' -MockWith { $getProcessMitigationMock }
+                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget SYSTEM -Enable TerminateOnError -Disable SEHOP, BlockRemoteImageLoads
 
                 It 'Should return expected values for Enabled' {
-                    $result.Enable | Should be 'TerminateOnError'
+                    $result.Enable | Should -Be 'TerminateOnError'
                 }
 
                 It 'Should return expected values for Disabled' {
-                    $result.Disable | Should Be 'SEHOP'
+                    $result.Disable | Should -Be 'SEHOP'
                 }
 
                 It 'Should return expected values for Default' {
-                    $result.Default | Should Be 'BlockRemoteImageLoads'
+                    $result.Default | Should -Be 'BlockRemoteImageLoads'
                 }
             }
 
             Context 'MitigationTarget is not System' {
                 Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
+                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
                 It 'Should return expected values for Enabled' {
@@ -81,6 +104,7 @@ try
 
             Context 'Test when multiple Mitigations are returned per property' {
                 Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
+                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads, SEHOP, EmulateAtlThunks, TerminateOnError
 
                 It 'Should return expected values for Enabled' {
@@ -97,7 +121,8 @@ try
             }
 
             Context 'Return hashtable should not have empty elements' {
-                Mock -CommandName Get-ProcessMitigation
+                Mock -CommandName 'Get-ProcessMitigation'
+                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
 
                 It 'Enable Should be NULL' {
                     $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
@@ -117,6 +142,7 @@ try
 
             Context 'Return hashtable values should be array' {
                 Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
+                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
                 It 'Should be an array' {
@@ -187,6 +213,7 @@ try
             }
         }
     }
+
 }
 finally
 {
