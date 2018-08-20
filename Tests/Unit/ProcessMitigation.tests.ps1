@@ -67,8 +67,8 @@ try
         Describe 'Get-TargetResource' {
             Context 'MitigationTarget is System' {
 
-                Mock -CommandName 'Get-ProcessMitigation' -MockWith { $getProcessMitigationMock }
-                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
+                Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
+                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget SYSTEM -Enable TerminateOnError -Disable SEHOP, BlockRemoteImageLoads
 
                 It 'Should return expected values for Enabled' {
@@ -85,13 +85,14 @@ try
             }
 
             Context 'MitigationTarget is not System' {
-                Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
-                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
+                Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
+                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
                 It 'Should return expected values for Enabled' {
                     $result.Enable | Should be 'DEP'
                 }
+
                 It 'Should return expected values for Disabled' {
                     $result.Disable | Should Be 'BottomUp'
                 }
@@ -103,7 +104,7 @@ try
 
             Context 'Test when multiple Mitigations are returned per property' {
                 Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
-                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
+                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads, SEHOP, EmulateAtlThunks, TerminateOnError
 
                 It 'Should return expected values for Enabled' {
@@ -120,8 +121,8 @@ try
             }
 
             Context 'Return hashtable should not have empty elements' {
-                Mock -CommandName 'Get-ProcessMitigation'
-                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
+                Mock -CommandName Get-ProcessMitigation
+                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
 
                 It 'Enable Should be NULL' {
                     $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
@@ -141,7 +142,7 @@ try
 
             Context 'Return hashtable values should be array' {
                 Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
-                Mock -CommandName 'Get-PolicyString' -MockWith { $mockPolicyStrings }
+                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
                 It 'Should be an array' {
