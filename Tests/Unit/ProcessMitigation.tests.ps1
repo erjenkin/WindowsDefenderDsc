@@ -11,8 +11,6 @@ if ( (-not (Test-Path -Path (Join-Path -Path $script:moduleRoot -ChildPath 'DSCR
 
 Import-Module -Name (Join-Path -Path $script:moduleRoot -ChildPath (Join-Path -Path 'DSCResource.Tests' -ChildPath 'TestHelper.psm1')) -Force
 
-Import-Module -Name $PSScriptRoot\ProcessMitigationsStub.psm1 -Force
-
 $TestEnvironment = Initialize-TestEnvironment `
     -DSCModuleName 'WindowsDefenderDsc' `
     -DSCResourceName 'ProcessMitigation' `
@@ -31,6 +29,7 @@ function Invoke-TestCleanup {
 try
 {
     InModuleScope 'ProcessMitigation' {
+        Import-Module -Name $PSScriptRoot\ProcessMitigationsStub.psm1 -Force
         $mockPolicyStrings = @(
             'Dep'
             'Aslr'
@@ -49,11 +48,11 @@ try
         )
 
         $getProcessMitigationMock = @{
-            Heap = @{
+            Heap  = @{
                 TerminateOnError = 'ON'
             }
             SEHOP = @{
-                Enable = 'OFF'
+                Enable                = 'OFF'
                 BlockRemoteImageLoads = 'NOTSET'
             }
             DEP   = @{
@@ -146,7 +145,7 @@ try
                 $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
 
                 It 'Should be an array' {
-                    $result.Enable  -is [array] | Should Be $true
+                    $result.Enable -is [array] | Should Be $true
                     $result.Disable -is [array] | Should Be $true
                     $result.Default -is [array] | Should Be $true
                 }
@@ -175,7 +174,7 @@ try
                 }
 
                 It 'Should return FALSE when policy is default' {
-                    $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP','BottomUp'
+                    $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP', 'BottomUp'
                     $result | Should Be $false
                 }
             }
