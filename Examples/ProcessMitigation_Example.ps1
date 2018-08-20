@@ -2,7 +2,7 @@
 configuration SYSTEM_MSFeedSync
 {
 
-    Import-DscResource -ModuleName ProcessMitigationDsc
+    Import-DscResource -ModuleName WindowsDefenderDsc
     node localhost
     {
         ProcessMitigation SYSTEM

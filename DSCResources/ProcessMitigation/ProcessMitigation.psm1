@@ -31,10 +31,12 @@ function Get-TargetResource
 
     if ($MitigationTarget -eq 'System')
     {
+        Write-Verbose -Message ($script:localizedData.getOnSystem)
         $currentMitigation = Get-ProcessMitigation -System
     }
     else
     {
+        Write-Verbose -Message ($script:localizedData.getOnProcess -f $MitigationTarget)
         $currentMitigation = Get-ProcessMitigation -Name $MitigationTarget
     }
 
@@ -62,9 +64,9 @@ function Get-TargetResource
         }
     }
 
-        $enableResults  = Get-ProcessMitgationResult -RawResult $results -ResultType Enable
-        $disableResults = Get-ProcessMitgationResult -RawResult $results -ResultType Disable
-        $defaultResults = Get-ProcessMitgationResult -RawResult $results -ResultType Default
+    $enableResults  = Get-ProcessMitgationResult -RawResult $results -ResultType Enable
+    $disableResults = Get-ProcessMitgationResult -RawResult $results -ResultType Disable
+    $defaultResults = Get-ProcessMitgationResult -RawResult $results -ResultType Default
 
     $returnValue = @{
         MitigationTarget = $MitigationTarget
@@ -85,9 +87,11 @@ function Set-TargetResource
         [string]
         $MitigationTarget,
 
+        [Parameter()]
         [string[]]
         $Enable,
 
+        [Parameter()]
         [string[]]
         $Disable
     )
@@ -96,10 +100,12 @@ function Set-TargetResource
 
     if ($MitigationTarget -eq 'System')
     {
+        Write-Verbose -Message ($script:localizedData.SetOnSystem)
         Set-ProcessMitigation -System @PSBoundParameters
     }
     else
     {
+        Write-Verbose -Message ($script:localizedData.SetOnProcess -f $MitigationTarget)
         Set-ProcessMitigation -Name $MitigationTarget @PSBoundParameters
     }
 }
@@ -114,9 +120,11 @@ function Test-TargetResource
         [string]
         $MitigationTarget,
 
+        [Parameter()]
         [string[]]
         $Enable,
 
+        [Parameter()]
         [string[]]
         $Disable
     )
@@ -158,6 +166,7 @@ function Test-TargetResource
 function Get-ProcessMitgationResult
 {
     [CmdletBinding()]
+    [OutputType([PSobject])]
     [OutputType([System.String[]])]
     param
     (
