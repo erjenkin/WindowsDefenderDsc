@@ -1,4 +1,4 @@
-﻿# This section suppresses rules PsScriptAnalyzer may catch in stub functions. 
+# This section suppresses rules PsScriptAnalyzer may catch in stub functions. 
 [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingUserNameAndPassWordParams', '')]
 [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', '')]
 [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUsePSCredentialType', '')]
