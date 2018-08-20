@@ -26,7 +26,7 @@ test_script:
         Invoke-AppveyorTestScriptTask `
             -Type 'Default' `
             -CodeCoverage `
-            -CodeCovIo
+            -CodeCovIo 
 
 #---------------------------------#
 #      deployment configuration   #
