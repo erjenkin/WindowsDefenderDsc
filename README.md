@@ -8,7 +8,7 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 
 ## Resources
 
-* **ProcessMitigation**: Configures process mitigation policies.
+* **ProcessMitigation**: Leverages the ProcessMitigations module in Windows 10 to manage process mitigation policies.
 
 ## ProcessMitigation
 
