@@ -162,7 +162,7 @@ try
 
             Mock -CommandName 'Get-TargetResource' -MockWith {$mockGetTargetResource}
 
-            Context 'Not is a desired state' {
+            Context 'Not in a desired state' {
                 It 'Should return FALSE when Enable is not in a desired state' {
                     $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP', 'TelemetryOnly'
                     $result | Should Be $false
