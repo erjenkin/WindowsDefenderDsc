@@ -5,7 +5,16 @@ Import-Module -Name (Join-Path -Path $modulePath `
             -ChildPath 'WindowsDefenderDsc.ResourceHelper.psm1')
 
 $script:localizedData = Get-LocalizedData -ResourceName 'ProcessMitigation' -ResourcePath (Split-Path -Parent $Script:MyInvocation.MyCommand.Path)
-
+<#
+    .SYNOPSIS
+        Gets the current state of a process mitigation
+    .PARAMETER MitigationTarget
+        Name of the process to apply mitigation settings to.
+    .PARAMETER Enable
+        List of mitigations to enable.
+    .PARAMETER Disable
+        List of mitigations to disable.
+#>
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -78,6 +87,16 @@ function Get-TargetResource
 }
 
 
+<#
+    .SYNOPSIS
+        Sets the current state of a process mitigation
+    .PARAMETER MitigationTarget
+        Name of the process to apply mitigation settings to.
+    .PARAMETER Enable
+        List of mitigations to enable.
+    .PARAMETER Disable
+        List of mitigations to disable.
+#>
 function Set-TargetResource
 {
     [CmdletBinding()]
@@ -110,6 +129,16 @@ function Set-TargetResource
     }
 }
 
+<#
+    .SYNOPSIS
+        Tests the current state of a process mitigation
+    .PARAMETER MitigationTarget
+        Name of the process to apply mitigation settings to.
+    .PARAMETER Enable
+        List of mitigations to enable.
+    .PARAMETER Disable
+        List of mitigations to disable.
+#>
 function Test-TargetResource
 {
     [CmdletBinding()]
@@ -133,9 +162,9 @@ function Test-TargetResource
     $currentState = Get-TargetResource @PSBoundParameters
 
     # verify policies in Enable are in a desired state
-    foreach ( $policy in $Enable )
+    foreach ($policy in $Enable)
     {
-        if ( $policy -notin $currentState.Enable )
+        if ($policy -notin $currentState.Enable)
         {
             Write-Verbose -Message ($script:localizedData.policyNotInDesiredStateEnabled -f $policy)
             $inDesiredState = $false
@@ -145,7 +174,7 @@ function Test-TargetResource
     # verify policies in Disable are in a desired state
     foreach ( $policy in $Disable )
     {
-        if ( $policy -notin $currentState.Disable )
+        if ($policy -notin $currentState.Disable)
         {
             Write-Verbose -Message ($script:localizedData.policyNotInDesiredStateDisabled -f $policy)
             $inDesiredState = $false
@@ -166,8 +195,7 @@ function Test-TargetResource
 function Get-ProcessMitgationResult
 {
     [CmdletBinding()]
-    [OutputType([PSobject])]
-    [OutputType([System.String[]])]
+    [OutputType([PSobject[]])]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -189,18 +217,22 @@ function Get-ProcessMitgationResult
 
     $result = @(($RawResult | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] }).Mitigation)
 
-    if ( [string]::IsNullOrEmpty($result) )
+    if ([string]::IsNullOrEmpty($result))
     {
         return $null
     }
-    else
-    {
-        return $result
-    }
+
+    return $result
 }
 
+<#
+    .SYNOPSIS
+        Returns all the possible mitigation policy strings
+#>
 function Get-PolicyString
 {
+    [CmdletBinding()]
+    [OutputType([System.String[]])]
     param ()
     
     Import-Module -Name ProcessMitigations -Verbose:0

@@ -13,8 +13,8 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 ## ProcessMitigation
 
 * **MitigationTarget**: Name of the process to apply mitigation settings to.
-* **Enable**: Comma separated list of mitigations to enable.
-* **Disable**: Comma separated list of mitigations to disable.
+* **Enable**: List of mitigations to enable.
+* **Disable**: List of mitigations to disable.
 
 ## Versions
 
@@ -24,3 +24,38 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 
 * Intiial release with the following resources:
   * ProcessMitigation
+
+## Examples
+
+### Enable/Disable process mitigations on SYSTEM and msfeedsync.exe
+
+In the following example configuration, the DEP and SEHOP process mitigations are enabled while disabling TermindateOnError.
+Additionally, the CFG process mitigation is enabled while StictHandle is disabled.
+
+```PowerShell
+configuration SYSTEM_MSFeedSync
+{
+
+    Import-DscResource -ModuleName WindowsDefenderDsc
+    node localhost
+    {
+        ProcessMitigation SYSTEM
+        {
+            MitigationTarget = 'SYSTEM'
+            Enable           = 'DEP', 'SEHOP'
+            Disable          = 'TerminateOnError'
+        }
+
+        ProcessMitigation msfeedssync
+        {
+            MitigationTarget = 'msfeedssync.exe'
+            Enable = 'CFG'
+            Disable = 'StrictHandle'
+        }
+    }
+}
+
+SYSTEM_MSFeedSync -OutputPath 'C:\DSC'
+
+Start-DscConfiguration -Path 'C:\DSC' -Wait -Force -Verbose
+```
