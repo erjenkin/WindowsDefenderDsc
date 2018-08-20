@@ -1,8 +1,8 @@
-#---------------------------------# 
-#      environment configuration  # 
-#---------------------------------# 
+#---------------------------------#
+#      environment configuration  #
+#---------------------------------#
 version: 1.0.{build}.0
-image: WMF 5
+
 install:
     - git clone https://github.com/PowerShell/DscResource.Tests
     - ps: |
@@ -12,13 +12,13 @@ install:
 
 #---------------------------------#
 #      build configuration        #
-#---------------------------------# 
+#---------------------------------#
 
 build: false
 
-#---------------------------------# 
-#      test configuration         # 
-#---------------------------------# 
+#---------------------------------#
+#      test configuration         #
+#---------------------------------#
 
 
 test_script:
@@ -28,11 +28,11 @@ test_script:
             -CodeCoverage `
             -CodeCovIo
 
-#---------------------------------# 
-#      deployment configuration   # 
-#---------------------------------# 
+#---------------------------------#
+#      deployment configuration   #
+#---------------------------------#
 
-# scripts to run before deployment 
+# scripts to run before deployment
 
 deploy_script: 
 
