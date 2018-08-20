@@ -195,7 +195,7 @@ function Test-TargetResource
 function Get-ProcessMitgationResult
 {
     [CmdletBinding()]
-    [OutputType([PSobject[]])]
+    [OutputType([System.Object[]])]
     param
     (
         [Parameter(Mandatory = $true)]
