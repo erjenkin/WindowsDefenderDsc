@@ -126,17 +126,17 @@ try
 
                 It 'Enable Should be NULL' {
                     $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
-                    $null -eq $result.Enable | Should Be $true
+                    [string]::IsNullOrWhiteSpace($result.Enable) | Should Be $true
                 }
 
                 It 'Disable Should be NULL' {
                     $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
-                    $null -eq $result.Disable | Should Be $true
+                    [string]::IsNullOrWhiteSpace($result.Disable) | Should Be $true
                 }
 
                 It 'Default Should be NULL' {
                     $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BottomUp
-                    $null -eq $result.Default | Should Be $true
+                    [string]::IsNullOrWhiteSpace($result.Default) | Should Be $true
                 }
             }
 

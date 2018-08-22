@@ -73,15 +73,13 @@ function Get-TargetResource
         }
     }
 
-    $enableResults  = Get-ProcessMitgationResult -RawResult $results -ResultType Enable
-    $disableResults = Get-ProcessMitgationResult -RawResult $results -ResultType Disable
-    $defaultResults = Get-ProcessMitgationResult -RawResult $results -ResultType Default
+    $processMitigationResults  = Get-ProcessMitgationResult -RawResult $results
 
     $returnValue = @{
         MitigationTarget = $MitigationTarget
-        Enable           = [string[]]$enableResults
-        Disable          = [string[]]$disableResults
-        Default          = [string[]]$defaultResults
+        Enable           = [string[]]$processMitigationResults.Enable
+        Disable          = [string[]]$processMitigationResults.Disable
+        Default          = [string[]]$processMitigationResults.Default
     }
     return $returnValue
 }
@@ -189,8 +187,6 @@ function Test-TargetResource
         Ensure the results are not an empty collection. Get-DscConfiguration will fail if the return result do not match the schema.mof
     .PARAMETER RawResult
         A hastable of the results to filter
-    .PARAMETER ResultType
-        Specifies if we want to filter for mitgations policies that are Enable, Disable, or in the Default status.
 #>
 function Get-ProcessMitgationResult
 {
@@ -201,28 +197,14 @@ function Get-ProcessMitgationResult
         [Parameter(Mandatory = $true)]
         [AllowEmptyCollection()]
         [hashtable[]]
-        $RawResult,
-
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Enable', 'Disable', 'Default')]
-        [string]
-        $ResultType
+        $RawResult
     )
 
-    $resultTypeEnum = @{
-        Enable  = 'ON'
-        Disable = 'OFF'
-        Default = 'NOTSET'
+    [pscustomobject]@{
+        Enable  = @(($RawResult | Where-Object -FilterScript { $PSItem.Value -eq 'ON' }).Mitigation)
+        Disable = @(($RawResult | Where-Object -FilterScript { $PSItem.Value -eq 'OFF' }).Mitigation)
+        Default = @(($RawResult | Where-Object -FilterScript { $PSItem.Value -eq 'NOTSET' }).Mitigation)
     }
-
-    $result = @(($RawResult | Where-Object -FilterScript { $PSItem.Value -eq $resultTypeEnum[$ResultType] }).Mitigation)
-
-    if ([string]::IsNullOrEmpty($result))
-    {
-        return $null
-    }
-
-    return $result
 }
 
 <#
