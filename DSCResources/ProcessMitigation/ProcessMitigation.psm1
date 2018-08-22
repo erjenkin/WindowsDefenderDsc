@@ -84,7 +84,6 @@ function Get-TargetResource
     return $returnValue
 }
 
-
 <#
     .SYNOPSIS
         Sets the current state of a process mitigation
@@ -216,7 +215,7 @@ function Get-PolicyString
     [CmdletBinding()]
     [OutputType([System.String[]])]
     param ()
-    
+
     Import-Module -Name ProcessMitigations -Verbose:0
     return [Microsoft.Samples.PowerShell.Commands.AppMitigations].GetProperties().Name
 }
