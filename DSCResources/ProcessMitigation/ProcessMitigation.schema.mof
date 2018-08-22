@@ -1,0 +1,9 @@
+
+[ClassVersion("1.0.0.0"), FriendlyName("ProcessMitigation")]
+class ProcessMitigation : OMI_BaseResource
+{
+    [Key, Description("Name of the process to apply mitigation settings to. Use System to configure system defaults rather than individual app")] String MitigationTarget;
+    [Write, Description("Comma separated list of mitigations to enable. Disable list takes priority over enable list. If specified in both, it will be disabled.")] String Enable[];
+    [Write, Description("Comma separated list of mitigations to disable. Disable list takes priority over enable list. If specified in both, it will be disabled.")] String Disable[];
+    [Read, Description("List the mitigation policies that are currently set to the default value.")] String Default[];
+};
