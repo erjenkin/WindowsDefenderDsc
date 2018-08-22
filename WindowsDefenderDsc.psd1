@@ -29,7 +29,7 @@
     Description = 'Manages the security mitigations available in the Windows Defender Security Center'
 
     # Minimum version of the Windows PowerShell engine required by this module
-    PowerShellVersion = '5.0'
+    PowerShellVersion = '5.1'
 
     # DSC resources to export from this module
     DscResourcesToExport = @('ProcessMitigation')
