@@ -20,6 +20,25 @@ function Get-TargetResource
     [CmdletBinding()]
     [OutputType([System.Collections.Hashtable])]
 
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationTarget,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationType,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationName,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationValue
+    )
+
     $currentMitigations = Get-CurrentProcessMitigation
     $currentMitigationsConverted = Convert-CurrentMitigations -CurrentMitigations $currentMitigations
     $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
@@ -72,6 +91,7 @@ function Set-TargetResource
            {
                 $mitigation.$mitigationType.$mitigationName = $mitigationValue
                 $currentXml.Save($currentPath)
+                Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
                 Set-ProcessMitigation -PolicyFilePath $currentPath
            }
         }
@@ -122,7 +142,7 @@ function Test-TargetResource
         {
            if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
            {
-                Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigation.$mitigationType.$mitigationName)
+                Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
                 $inDesiredState = $false
            }
         }
