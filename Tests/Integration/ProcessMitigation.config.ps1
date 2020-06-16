@@ -1,21 +1,35 @@
 # Integration Test Config Template Version: 1.0.0
 
-$processMitgationParameters = @{
-    MitigationTarget = 'SYSTEM'
-    Enable           = 'DEP','SEHOP'
-    Disable          = 'ForceRelocateImages'
-}
+$processMitgationParameters = @(
+    @{
+        MitigationTarget = 'SYSTEM'
+        MitigationType = 'DEP'
+        MitigationName = 'Enable'
+        MitigationValue = 'true'
+    },
+    @{
+        MitigationTarget = 'SYSTEM'
+        MitigationType = 'ASLR'
+        MitigationName = 'OverrideForceRelocateImages'
+        MitigationValue = 'true'
+    }
+)
 
 configuration ProcessMitigation_config {
 
     Import-DscResource -ModuleName 'WindowsDefenderDsc'
 
     node localhost {
-        ProcessMitigation Integration_Test
+
+        foreach($processMitigationParameter in $processMitigationParameter)
         {
-            MitigationTarget = $processMitgationParameters.MitigationTarget
-            Enable           = $processMitgationParameters.Enable
-            Disable          = $processMitgationParameters.Disable
+            ProcessMitigation $processMitgationParameters.MitigationType
+            {
+                MitigationTarget = $processMitgationParameters.MitigationTarget
+                MitigationType = $processMitgationParameters.MitigationType
+                MitigationName = $processMitgationParameters.MitigationName
+                MitigationValue = $processMitgationParameters.MitigationValue
+            }
         }
     }
 }

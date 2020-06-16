@@ -29,41 +29,134 @@ function Invoke-TestCleanup {
 try
 {
     InModuleScope 'ProcessMitigation' {
-        Import-Module -Name $PSScriptRoot\ProcessMitigationsStub.psm1 -Force
-        $mockPolicyStrings = @(
-            'Dep'
-            'Aslr'
-            'StrictHandle'
-            'SystemCall'
-            'ExtensionPoint'
-            'DynamicCode'
-            'Cfg'
-            'BinarySignature'
-            'FontDisable'
-            'ImageLoad'
-            'Payload'
-            'SEHOP'
-            'Heap'
-            'ChildProcess'
-        )
 
-        $getProcessMitigationMock = @{
-            Heap  = @{
-                TerminateOnError = 'ON'
-            }
-            SEHOP = @{
-                Enable                = 'OFF'
-                BlockRemoteImageLoads = 'NOTSET'
-            }
-            DEP   = @{
-                Enable           = 'ON'
-                EmulateAtlThunks = 'NOTSET'
-            }
-            ASLR  = @{
-                BottomUp = 'OFF'
+        Describe 'Get-CurrentProcessMitigation'{
+            Context 'Getting current Process Mitigation Settings' {
+                $currentProcessMitigationResult = Get-CurrentProcessMitigation
+
+                It 'Should return 14 Mitigation types per target' {
+                    $currentProcessMitigationResult[0].Values.Keys.Count | Should -Be 14
+                }
+
+                It 'Should return 14 Mitigation Names per target' {
+                    $currentProcessMitigationResult[0].Values.Values.Count | Should -Be 14
+                }
+
+                It 'Should return type object array' {
+                    $currentProcessMitigationResult.GetType().Name | Should -Be 'Object[]'
+                }
             }
         }
 
+        Describe 'Convert-CurrentMitigations'{
+            Context 'Converting Values to True/False' {
+                $currentProcessMitigationResult = Get-CurrentProcessMitigation
+                $convertCurrentMitigationsResult = Convert-CurrentMitigations -CurrentMitigations $currentProcessMitigationResult
+
+                It 'Should return only values of true or false' {
+                    $convertCurrentMitigationsResult.values.values.values | Should -Contain 'false'
+                    $convertCurrentMitigationsResult.values.values.values | Should -Contain 'true'
+                }
+
+                It 'Should not contain the values ON or OFF' {
+                    $convertCurrentMitigationsResult.values.values.values -match 'ON' | Should -BeFalse
+                    $convertCurrentMitigationsResult.values.values.values -match 'OFF'| Should -BeFalse
+                }
+            }
+        }
+
+        Describe 'Get-CurrentProcessMitigationXml'{
+            Context 'Generating new XML from converted results' {
+                $currentProcessMitigationResult = Get-CurrentProcessMitigation
+                $convertCurrentMitigationsResult = Convert-CurrentMitigations -CurrentMitigations $currentProcessMitigationResult
+                $CurrentProcessMitigationXml = Get-CurrentProcessMitigationXml -CurrentMitigationsConverted $convertCurrentMitigationsResult
+
+                It 'Should return the path of the new xml'{
+                    $CurrentProcessMitigationXml | Should -BeLike "*\AppData\Local\Temp\MitigationsCurrent.xml"
+                }
+            }
+        }
+
+
+        $testParameters = @{
+
+            MitigationTarget = "winword.exe"
+            MitigationType = "DEP"
+            MitigationName = "OverrideDEP"
+            MitigationValue = "false"
+        }
+
+        Describe 'Get-TargetResource'{
+            Context 'Testing Get-TargetResource function' {
+                $result = Get-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
+
+                It 'Should not throw'{
+                    {Get-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue} | Should -Not -Throw
+                }
+
+                It 'Should return and xml'{
+                   $result | Should -BeOfType System.Xml.XmlNode
+                }
+            }
+        }
+
+        Describe 'Test-TargetResource'{
+            Context 'Testing Test-TargetResource function' {
+                $result = Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
+                [string] $resultCurrent = (Get-ProcessMitigation -Name $testParameters.MitigationTarget).($testParameters.MitigationType).($testParameters.MitigationName)
+                #$resultTestParameter = '{0}{1}' -f "$", $testParameters.MitigationValue
+                if($resultCurrent -eq $testParameters.MitigationValue)
+                {
+                    It 'Should return true'{
+                        $result | Should -BeTrue
+                    }
+                }
+                else
+                {
+                    It 'Should return false'{
+                        $result | Should -Befalse
+                    }
+                }
+
+                It 'Should not throw'{
+                    {Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue} | Should -Not -Throw
+                }
+            }
+        }
+
+        Describe 'Set-TargetResource'{
+            Context 'Testing Set-TargetResource function' {
+
+                $result = Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
+
+                if ($result -eq $false)
+                {
+                    Set-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
+                    $resultSet = (Get-ProcessMitigation -Name $testParameters.MitigationTarget).($testParameters.MitigationType).($testParameters.MitigationName)
+
+                    It 'Should be equal to $testParameters.MitigationValue'{
+                        $resultSet | Should -be "OFF"
+                    }
+                }
+                else
+                {
+                    It 'Should not throw'{
+                        {Set-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue} | Should -Not -Throw
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+
+
+
+<#
         Describe 'Get-TargetResource' {
             Context 'MitigationTarget is System' {
 
@@ -110,11 +203,11 @@ try
                 It 'Should return expected values for Enabled' {
                     ($result.Enable | Sort-Object) | Should be ('DEP', 'TerminateOnError' | Sort-Object)
                 }
-                
+
                 It 'Should return expected values for Disabled' {
                     ($result.Disable | Sort-Object) | Should be ('BottomUp', 'SEHOP' | Sort-Object)
                 }
-                
+
                 It 'Should return expected values for Default' {
                     ($result.Default | Sort-Object) | Should be ('EmulateAtlThunks', 'BlockRemoteImageLoads' | Sort-Object)
                 }
@@ -213,8 +306,7 @@ try
             }
         }
     }
-
-}
+}#>
 finally
 {
     Invoke-TestCleanup
