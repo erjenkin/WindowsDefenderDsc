@@ -80,21 +80,80 @@ function Set-TargetResource
     )
 
     $currentState = Get-TargetResource @PSBoundParameters
-    $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+    if($mitigationTarget -eq "System")
+    {
+        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+    }
+    else
+    {
+        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+    }
+
     [xml]$currentXml = Get-Content $currentPath
 
-    foreach ($mitigation in $currentXml.MitigationPolicy.AppConfig)
+    if($mitigationTarget -eq "System")
     {
-        if ($mitigation.Executable -eq $MitigationTarget)
+        if($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
         {
-           if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
-           {
-                $mitigation.$mitigationType.$mitigationName = $mitigationValue
-                $currentXml.Save($currentPath)
-                Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-                Set-ProcessMitigation -PolicyFilePath $currentPath
-           }
+            $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
+            $currentXml.Save($currentPath)
+            Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
+            Set-ProcessMitigation -PolicyFilePath $currentPath
         }
+    }
+    else {
+        foreach ($mitigation in $currentXml.MitigationPolicy.AppConfig)
+        {
+            if ($mitigation.Executable -eq $MitigationTarget)
+            {
+               if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
+               {
+                    $mitigation.$mitigationType.$mitigationName = $mitigationValue
+                    $currentXml.Save($currentPath)
+                    Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
+                    Set-ProcessMitigation -PolicyFilePath $currentPath
+               }
+            }
+        }
+    }
+
+    $targetMatches = [regex]::matches($currentXml.MitigationPolicy.AppConfig.Executable,$MitigationTarget,"IgnoreCase")
+    if (-not $targetMatches)
+    {
+        # Set The Formatting
+        $xmlsettings = New-Object System.Xml.XmlWriterSettings
+        $xmlsettings.Indent = $true
+        $xmlsettings.IndentChars = "    "
+
+        # Set the File Name Create The Document
+        $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
+        $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
+
+        # Write the XML Decleration and set the XSL
+        $xmlWriter.WriteStartDocument()
+
+        # Start the Root Element
+        $xmlWriter.WriteStartElement("MitigationPolicy")
+
+        $xmlWriter.WriteStartElement("AppConfig")
+        $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
+
+        $xmlWriter.WriteStartElement($MitigationType)
+        $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
+        $xmlWriter.WriteEndElement()
+
+        # Write end process
+        $xmlWriter.WriteEndElement()
+
+        # Write end root
+        $xmlWriter.WriteEndElement()
+
+        # End, Finalize and close the XML Document
+        $xmlWriter.WriteEndDocument()
+        $xmlWriter.Flush()
+        $xmlWriter.Close()
+
+        Set-ProcessMitigation -PolicyFilePath $currentPathTemp
     }
 
 }
@@ -135,17 +194,35 @@ function Test-TargetResource
     $inDesiredState = $true
     $currentState = Get-TargetResource @PSBoundParameters
 
-    # verify policies in Enable are in a desired state
-    foreach ($mitigation in $currentState.MitigationPolicy.AppConfig)
+    if($mitigationTarget -eq "System")
     {
-        if ($mitigation.Executable -eq $MitigationTarget)
+        if ($currentState.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
         {
-           if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
-           {
-                Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
-                $inDesiredState = $false
-           }
+            Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+            $inDesiredState = $false
         }
+    }
+    else
+    {
+        # verify policies in Enable are in a desired state
+        foreach ($mitigation in $currentState.MitigationPolicy.AppConfig)
+        {
+            if ($mitigation.Executable -eq $MitigationTarget)
+            {
+                if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
+                {
+                    Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+                    $inDesiredState = $false
+                }
+            }
+        }
+    }
+
+    $mitigationMatches = [regex]::matches($currentState.MitigationPolicy.AppConfig.Executable,$MitigationTarget,"IgnoreCase")
+    if(-not $mitigationMatches)
+    {
+        Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+        $inDesiredState = $false
     }
 
     return $inDesiredState
@@ -155,7 +232,14 @@ function Get-CurrentProcessMitigation
 {
     $currentMitigation = @()
     [hashtable[]]$resultCurrentMitigations = @()
-    $currentMitigation = Get-ProcessMitigation
+    if($mitigationTarget -eq "System")
+    {
+        $currentMitigation = Get-ProcessMitigation -System
+    }
+    else
+    {
+        $currentMitigation = Get-ProcessMitigation
+    }
 
     foreach ($mitigation in $currentMitigation)
     {
@@ -331,9 +415,18 @@ function Get-CurrentProcessMitigationXml
     $xmlsettings.Indent = $true
     $xmlsettings.IndentChars = "    "
 
-    # Set the File Name Create The Document
-    $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
-    $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
+    If ($MitigationTarget -eq "System")
+    {
+        # Set the File Name Create The Document
+        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+        $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
+    }
+    else
+    {
+        # Set the File Name Create The Document
+        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+        $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
+    }
 
     # Write the XML Decleration and set the XSL
     $xmlWriter.WriteStartDocument()
@@ -343,9 +436,17 @@ function Get-CurrentProcessMitigationXml
 
     foreach($mitigation in $CurrentMitigationsConverted)
     {
-        # Write process name
-        $xmlWriter.WriteStartElement("AppConfig")
-        $xmlWriter.WriteAttributeString("Executable",$mitigation.Keys)
+        If ($MitigationTarget -eq "System")
+        {
+            # Write process name
+            $xmlWriter.WriteStartElement("SystemConfig")
+        }
+        else
+        {
+            # Write process name
+            $xmlWriter.WriteStartElement("AppConfig")
+            $xmlWriter.WriteAttributeString("Executable",$mitigation.Keys)
+        }
 
         # Write DEP Settings
         $xmlWriter.WriteStartElement("DEP")
@@ -472,9 +573,9 @@ function Get-CurrentProcessMitigationXml
 
         # Write ChildProcess Settings
         $xmlWriter.WriteStartElement("ChildProcess")
-        $xmlWriter.WriteAttributeString("OverrideChildProcess",$mitigation.Values.ChildProccess.OverrideChildProcess)
-        $xmlWriter.WriteAttributeString("DisallowChildProcessCreation",$mitigation.Values.ChildProccess.DisallowChildProcessCreation)
-        $xmlWriter.WriteAttributeString("Audit",$mitigation.Values.ChildProccess.Audit)
+        $xmlWriter.WriteAttributeString("OverrideChildProcess",$mitigation.Values.ChildProcess.OverrideChildProcess)
+        $xmlWriter.WriteAttributeString("DisallowChildProcessCreation",$mitigation.Values.ChildProcess.DisallowChildProcessCreation)
+        $xmlWriter.WriteAttributeString("Audit",$mitigation.Values.ChildProcess.Audit)
         $xmlWriter.WriteEndElement()
 
         # Write end process
