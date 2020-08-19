@@ -47,6 +47,7 @@ function Get-TargetResource
     {
         $currentMitigations = Get-CurrentProcessMitigation
     }
+
     $currentMitigations = Get-CurrentProcessMitigation
     $currentMitigationsConverted = Convert-CurrentMitigations -CurrentMitigations $currentMitigations
     $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
@@ -379,7 +380,7 @@ function Convert-CurrentMitigations
     foreach ($mitigationTarget in  $CurrentMitigationsConverted)
     {
         $targetName = $mitigationTarget.keys
-        $target = $CurrentMitigationsConverted.$targetName
+        $target = $currentMitigationsConverted.$targetName
 
         foreach ($mitigationType in $mitigationTypes)
         {
@@ -404,7 +405,8 @@ function Convert-CurrentMitigations
             }
         }
     }
-    return $CurrentMitigationsConverted
+
+    return $currentMitigationsConverted
 }
 
 function Get-CurrentProcessMitigationXml
@@ -444,7 +446,7 @@ function Get-CurrentProcessMitigationXml
 
     foreach($mitigation in $CurrentMitigationsConverted)
     {
-        If ($MitigationTarget -eq "System")
+        if ($MitigationTarget -eq "System")
         {
             # Write process name
             $xmlWriter.WriteStartElement("SystemConfig")
