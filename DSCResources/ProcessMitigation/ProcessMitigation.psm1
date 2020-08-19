@@ -39,6 +39,14 @@ function Get-TargetResource
         $MitigationValue
     )
 
+    if ($mitigationTarget -eq "System")
+    {
+        $currentMitigations = Get-CurrentProcessMitigation -System
+    }
+    else
+    {
+        $currentMitigations = Get-CurrentProcessMitigation
+    }
     $currentMitigations = Get-CurrentProcessMitigation
     $currentMitigationsConverted = Convert-CurrentMitigations -CurrentMitigations $currentMitigations
     $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
@@ -80,7 +88,7 @@ function Set-TargetResource
     )
 
     $currentState = Get-TargetResource @PSBoundParameters
-    if($mitigationTarget -eq "System")
+    if ($mitigationTarget -eq "System")
     {
         $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
     }
@@ -91,9 +99,9 @@ function Set-TargetResource
 
     [xml]$currentXml = Get-Content $currentPath
 
-    if($mitigationTarget -eq "System")
+    if ($mitigationTarget -eq "System")
     {
-        if($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
+        if ($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
         {
             $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
             $currentXml.Save($currentPath)
@@ -194,7 +202,7 @@ function Test-TargetResource
     $inDesiredState = $true
     $currentState = Get-TargetResource @PSBoundParameters
 
-    if($mitigationTarget -eq "System")
+    if ($mitigationTarget -eq "System")
     {
         if ($currentState.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
         {
@@ -219,7 +227,7 @@ function Test-TargetResource
     }
 
     $mitigationMatches = [regex]::matches($currentState.MitigationPolicy.AppConfig.Executable,$MitigationTarget,"IgnoreCase")
-    if(-not $mitigationMatches)
+    if (-not $mitigationMatches)
     {
         Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
         $inDesiredState = $false
@@ -232,7 +240,7 @@ function Get-CurrentProcessMitigation
 {
     $currentMitigation = @()
     [hashtable[]]$resultCurrentMitigations = @()
-    if($mitigationTarget -eq "System")
+    if ($mitigationTarget -eq "System")
     {
         $currentMitigation = Get-ProcessMitigation -System
     }
@@ -264,13 +272,13 @@ function Get-CurrentProcessMitigation
                     OverrideStrictHandle = $mitigation.StrictHandle.OverrideStrictHandle
                 }
                 SystemCalls = @{
-                    OverrideSystemCall       = $mitigation.SystemCalls.OverrideSystemCall
-                    DisableWin32kSystemCalls = $mitigation.SystemCalls.DisableWin32kSystemCalls
-                    Audit                    = $mitigation.SystemCalls.Audit
+                    OverrideSystemCall       = $mitigation.SystemCall.OverrideSystemCall
+                    DisableWin32kSystemCalls = $mitigation.SystemCall.DisableWin32kSystemCalls
+                    Audit                    = $mitigation.SystemCall.Audit
                 }
                 ExtensionPoints = @{
-                    DisableExtensionPoints = $mitigation.ExtensionPoints.DisableExtensionPoints
-                    OverrideExtensionPoint = $mitigation.ExtensionPoints.OverrideExtensionPoint
+                    DisableExtensionPoints  = $mitigation.ExtensionPoint.DisableExtensionPoints
+                    OverrideExtensionPoint = $mitigation.ExtensionPoint.OverrideExtensionPoint
                 }
                 DynamicCode = @{
                     OverrideDynamicCode  = $mitigation.DynamicCode.OverrideDynamicCode
@@ -279,26 +287,26 @@ function Get-CurrentProcessMitigation
                     Audit                = $mitigation.DynamicCode.Audit
                 }
                ControlFlowGuard = @{
-                    OverrideCFG            = $mitigation.ControlFlowGuard.OverrideCFG
-                    OverrideStrictCFG      = $mitigation.ControlFlowGuard.OverrideStrictCFG
-                    Enable                 = $mitigation.ControlFlowGuard.Enable
-                    SuppressExports        = $mitigation.ControlFlowGuard.SuppressExports
-                    StrictControlFlowGuard = $mitigation.ControlFlowGuard.StrictControlFlowGuard
+                    OverrideCFG            = $mitigation.CFG.OverrideCFG
+                    OverrideStrictCFG      = $mitigation.CFG.OverrideStrictCFG
+                    Enable                 = $mitigation.CFG.Enable
+                    SuppressExports        = $mitigation.CFG.SuppressExports
+                    StrictControlFlowGuard = $mitigation.CFG.StrictControlFlowGuard
                 }
                 SignedBinaries = @{
-                    MicrosoftSignedOnly                 = $mitigation.SignedBinaries.MicrosoftSignedOnly
-                    AllowStoreSignedBinaries            = $mitigation.SignedBinaries.AllowStoreSignedBinaries
-                    EnforceModuleDependencySigning      = $mitigation.SignedBinaries.EnforceModuleDependencySigning
-                    AuditMicrosoftSignedOnly            = $mitigation.SignedBinaries.Audit
-                    AuditStoreSigned                    = $mitigation.SignedBinaries.AuditStoreSigned
-                    AuditEnforceModuleDependencySigning = $mitigation.SignedBinaries.AuditEnforceModuleDependencySigning
-                    OverrideMicrosoftSignedOnly         = $mitigation.SignedBinaries.OverrideMicrosoftSignedOnly
-                    OverrideDependencySigning           = $mitigation.SignedBinaries.OverrideDependencySigning
+                    MicrosoftSignedOnly                    = $mitigation.BinarySignature.MicrosoftSignedOnly
+                    AllowStoreSignedBinaries               = $mitigation.BinarySignature.AllowStoreSignedBinaries
+                    EnforceModuleDependencySigning         = $mitigation.BinarySignature.EnforceModuleDependencySigning
+                    AuditMicrosoftSignedOnly               = $mitigation.BinarySignature.Audit
+                    AuditStoreSigned                       = $mitigation.BinarySignature.AuditStoreSigned
+                    AuditEnforceModuleDependencySigning    = $mitigation.BinarySignature.AuditEnforceModuleDependencySigning
+                    OverrideMicrosoftSignedOnly            = $mitigation.BinarySignature.OverrideMicrosoftSignedOnly
+                    OverrideEnforceModuleDependencySigning = $mitigation.BinarySignature.OverrideEnforceModuleDependencySigning
                 }
                 Fonts = @{
-                    DisableNonSystemFonts = $mitigation.Fonts.DisableNonSystemFonts
-                    Audit                 = $mitigation.Fonts.Audit
-                    OverrideFontDisable   = $mitigation.Fonts.OverrideFontDisable
+                    DisableNonSystemFonts = $mitigation.FontDisable.DisableNonSystemFonts
+                    Audit                 = $mitigation.FontDisable.Audit
+                    OverrideFontDisable   = $mitigation.FontDisable.OverrideFontDisable
                 }
                 ImageLoad = @{
                     AuditLowLabelImageLoads       = $mitigation.ImageLoad.AuditLowLabelImageLoads
@@ -373,23 +381,23 @@ function Convert-CurrentMitigations
         $targetName = $mitigationTarget.keys
         $target = $CurrentMitigationsConverted.$targetName
 
-        foreach($mitigationType in $mitigationTypes)
+        foreach ($mitigationType in $mitigationTypes)
         {
             [string[]] $mitigationKeys = $target.$mitigationType.Keys
-            foreach($mitigationKey in $mitigationKeys)
+            foreach ($mitigationKey in $mitigationKeys)
             {
                 $targetKey = $target.$mitigationType.$mitigationKey
-                if($targetKey -match "ON|True")
+                if ($targetKey -match "ON|True")
                 {
                     $target.$mitigationType.$mitigationKey =  "true"
                 }
 
-                if($targetKey -match "False|OFF")
+                if ($targetKey -match "False|OFF")
                 {
                     $target.$mitigationType.$mitigationKey =  "false"
                 }
 
-                if($targetKey -match 'NOTSET' -or $targetKey.count -lt 1)
+                if ($targetKey -match 'NOTSET' -or $targetKey.count -lt 1)
                 {
                     $target.$mitigationType.Remove($mitigationkey)
                 }
@@ -415,7 +423,7 @@ function Get-CurrentProcessMitigationXml
     $xmlsettings.Indent = $true
     $xmlsettings.IndentChars = "    "
 
-    If ($MitigationTarget -eq "System")
+    if ($MitigationTarget -eq "System")
     {
         # Set the File Name Create The Document
         $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
