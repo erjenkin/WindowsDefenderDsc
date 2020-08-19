@@ -104,7 +104,7 @@ try
             Context 'Testing Test-TargetResource function' {
                 $result = Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
                 [string] $resultCurrent = (Get-ProcessMitigation -Name $testParameters.MitigationTarget).($testParameters.MitigationType).($testParameters.MitigationName)
-                #$resultTestParameter = '{0}{1}' -f "$", $testParameters.MitigationValue
+
                 if($resultCurrent -eq $testParameters.MitigationValue)
                 {
                     It 'Should return true'{

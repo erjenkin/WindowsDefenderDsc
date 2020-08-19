@@ -42,17 +42,17 @@ configuration SYSTEM_MSFeedSync
         ProcessMitigation Firefox
         {
             MitigationTarget = 'firefox.exe'
-            MitigationType = 'fonts'
-            MitigationName  = 'DisableNonSystemFonts'
-            MitigationValue = 'true'
+            MitigationType   = 'fonts'
+            MitigationName   = 'DisableNonSystemFonts'
+            MitigationValue  = 'true'
         }
 
         ProcessMitigation msfeedssync
         {
             MitigationTarget = 'msfeedssync.exe'
-            MitigationType = 'ControlFlowGaurd'
-            MitigationName  = 'Enable'
-            MitigationValue = 'true'
+            MitigationType   = 'ControlFlowGaurd'
+            MitigationName   = 'Enable'
+            MitigationValue  = 'true'
         }
     }
 }

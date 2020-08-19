@@ -3,15 +3,15 @@
 $processMitgationParameters = @(
     @{
         MitigationTarget = 'SYSTEM'
-        MitigationType = 'DEP'
-        MitigationName = 'Enable'
-        MitigationValue = 'true'
+        MitigationType   = 'DEP'
+        MitigationName   = 'Enable'
+        MitigationValue  = 'true'
     },
     @{
         MitigationTarget = 'SYSTEM'
-        MitigationType = 'ASLR'
-        MitigationName = 'OverrideForceRelocateImages'
-        MitigationValue = 'true'
+        MitigationType   = 'ASLR'
+        MitigationName   = 'OverrideForceRelocateImages'
+        MitigationValue  = 'true'
     }
 )
 
@@ -26,9 +26,9 @@ configuration ProcessMitigation_config {
             ProcessMitigation $processMitgationParameters.MitigationType
             {
                 MitigationTarget = $processMitgationParameters.MitigationTarget
-                MitigationType = $processMitgationParameters.MitigationType
-                MitigationName = $processMitgationParameters.MitigationName
-                MitigationValue = $processMitgationParameters.MitigationValue
+                MitigationType   = $processMitgationParameters.MitigationType
+                MitigationName   = $processMitgationParameters.MitigationName
+                MitigationValue  = $processMitgationParameters.MitigationValue
             }
         }
     }

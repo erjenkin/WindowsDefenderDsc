@@ -227,8 +227,7 @@ function Test-TargetResource
         }
     }
 
-    $mitigationMatches = [regex]::matches($currentState.MitigationPolicy.AppConfig.Executable,$MitigationTarget,"IgnoreCase")
-    if (-not $mitigationMatches)
+    if ($currentState.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
     {
         Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
         $inDesiredState = $false
@@ -239,6 +238,9 @@ function Test-TargetResource
 
 function Get-CurrentProcessMitigation
 {
+    [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
+
     $currentMitigation = @()
     [hashtable[]]$resultCurrentMitigations = @()
     if ($mitigationTarget -eq "System")
@@ -374,9 +376,9 @@ function Convert-CurrentMitigations
         $CurrentMitigations
     )
 
-    [array[]]$currentMitigationsConverted = @()
-    [array[]]$currentMitigationsConverted = Get-CurrentProcessMitigation
-    $mitigationTypes = @("ControlFlowGuard","SystemCalls","StrictHandle","DynamicCode","PayLoad","ASLR","Heap","Fonts","SignedBinaries","ImageLoad","SEHOP","ExtensionPoints","DEP","ChildProcess")
+    $currentMitigationsConverted = @()
+    $currentMitigationsConverted = Get-CurrentProcessMitigation
+    $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
     foreach ($mitigationTarget in  $CurrentMitigationsConverted)
     {
         $targetName = $mitigationTarget.keys
