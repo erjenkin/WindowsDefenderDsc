@@ -126,8 +126,7 @@ function Set-TargetResource
         }
     }
 
-    $targetMatches = [regex]::matches($currentXml.MitigationPolicy.AppConfig.Executable,$MitigationTarget,"IgnoreCase")
-    if (-not $targetMatches)
+    if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
     {
         # Set The Formatting
         $xmlsettings = New-Object System.Xml.XmlWriterSettings
