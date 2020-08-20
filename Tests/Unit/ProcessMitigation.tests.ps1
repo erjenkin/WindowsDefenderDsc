@@ -90,6 +90,12 @@ try
                 MitigationType = "DEP"
                 MitigationName = "OverrideDEP"
                 MitigationValue = "true"
+            },
+            @{
+                MitigationTarget = "System"
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "true"
             }
         )
 
