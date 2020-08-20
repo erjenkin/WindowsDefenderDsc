@@ -78,70 +78,76 @@ try
         }
 
 
-        $testParameters = @{
-
-            MitigationTarget = "winword.exe"
-            MitigationType = "DEP"
-            MitigationName = "OverrideDEP"
-            MitigationValue = "false"
-        }
-
-        Describe 'Get-TargetResource'{
-            Context 'Testing Get-TargetResource function' {
-                $result = Get-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
-
-                It 'Should not throw'{
-                    {Get-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue} | Should -Not -Throw
-                }
-
-                It 'Should return and xml'{
-                   $result | Should -BeOfType System.Xml.XmlNode
-                }
+        $testParameters = @(
+            @{
+                MitigationTarget = "winword.exe"
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "true"
+            },
+            @{
+                MitigationTarget = "DOESNTEXIST"
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "true"
             }
-        }
+        )
 
-        Describe 'Test-TargetResource'{
-            Context 'Testing Test-TargetResource function' {
-                $result = Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
-                [string] $resultCurrent = (Get-ProcessMitigation -Name $testParameters.MitigationTarget).($testParameters.MitigationType).($testParameters.MitigationName)
+        foreach ($parameterSet in $testParameters)
+        {
+            Describe 'Get-TargetResource'{
+                Context 'Testing Get-TargetResource function' {
+                    $result = Get-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
 
-                if($resultCurrent -eq $testParameters.MitigationValue)
-                {
-                    It 'Should return true'{
-                        $result | Should -BeTrue
-                    }
-                }
-                else
-                {
-                    It 'Should return false'{
-                        $result | Should -Befalse
-                    }
-                }
-
-                It 'Should not throw'{
-                    {Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue} | Should -Not -Throw
-                }
-            }
-        }
-
-        Describe 'Set-TargetResource'{
-            Context 'Testing Set-TargetResource function' {
-
-                $result = Test-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
-
-                if ($result -eq $false)
-                {
-                    Set-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue
-                    $resultSet = (Get-ProcessMitigation -Name $testParameters.MitigationTarget).($testParameters.MitigationType).($testParameters.MitigationName)
-
-                    It 'Should be equal to $testParameters.MitigationValue'{
-                        $resultSet | Should -be "OFF"
-                    }
-                }
-                else
-                {
                     It 'Should not throw'{
-                        {Set-TargetResource -MitigationTarget $testParameters.MitigationTarget -MitigationType $testParameters.MitigationType -MitigationName $testParameters.MitigationName -MitigationValue $testParameters.MitigationValue} | Should -Not -Throw
+                        {Get-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
+                    }
+
+                    It 'Should return and xml'{
+                    $result | Should -BeOfType System.Xml.XmlNode
+                    }
+                }
+            }
+
+            Describe 'Test-TargetResource'{
+                Context 'Testing Test-TargetResource function' {
+                    $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
+                    [string] $resultCurrent = (Get-ProcessMitigation -Name $parameterSet.MitigationTarget).($parameterSet.MitigationType).($parameterSet.MitigationName)
+
+                    if($resultCurrent -eq $parameterSet.MitigationValue)
+                    {
+                        It 'Should return true'{
+                            $result | Should -BeTrue
+                        }
+                    }
+                    else
+                    {
+                        It 'Should return false'{
+                            $result | Should -Befalse
+                        }
+                    }
+
+                    It 'Should not throw'{
+                        {Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
+                    }
+                }
+            }
+
+            Describe 'Set-TargetResource'{
+                Context 'Testing Set-TargetResource function' {
+
+                    $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
+
+
+                    Set-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
+                    $resultSet = (Get-ProcessMitigation -Name $parameterSet.MitigationTarget).($parameterSet.MitigationType).($parameterSet.MitigationName)
+
+                    It "Should be equal to $($parameterSet.MitigationValue)"{
+                        $resultSet | Should -be $true
+                    }
+
+                    It 'Should not throw'{
+                        {Set-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
                     }
                 }
             }
