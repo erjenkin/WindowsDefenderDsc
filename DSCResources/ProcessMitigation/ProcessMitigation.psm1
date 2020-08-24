@@ -39,15 +39,8 @@ function Get-TargetResource
         $MitigationValue
     )
 
-    if ($mitigationTarget -eq "System")
-    {
-        $currentMitigations = Get-CurrentProcessMitigation -System
-    }
-    else
-    {
-        $currentMitigations = Get-CurrentProcessMitigation
-    }
 
+    $currentMitigations = Get-CurrentProcessMitigation
     $currentMitigationsConverted = Convert-CurrentMitigations -CurrentMitigations $currentMitigations
     $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
     [xml] $returnValue = Get-Content $currentPath
@@ -123,46 +116,47 @@ function Set-TargetResource
                }
             }
         }
+
+
+        if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
+        {
+            # Set The Formatting
+            $xmlsettings = New-Object System.Xml.XmlWriterSettings
+            $xmlsettings.Indent = $true
+            $xmlsettings.IndentChars = "    "
+
+            # Set the File Name Create The Document
+            $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
+            $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
+
+            # Write the XML Decleration and set the XSL
+            $xmlWriter.WriteStartDocument()
+
+            # Start the Root Element
+            $xmlWriter.WriteStartElement("MitigationPolicy")
+
+            $xmlWriter.WriteStartElement("AppConfig")
+            $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
+
+            $xmlWriter.WriteStartElement($MitigationType)
+            $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
+            $xmlWriter.WriteEndElement()
+
+            # Write end process
+            $xmlWriter.WriteEndElement()
+
+            # Write end root
+            $xmlWriter.WriteEndElement()
+
+            # End, Finalize and close the XML Document
+            $xmlWriter.WriteEndDocument()
+            $xmlWriter.Flush()
+            $xmlWriter.Close()
+
+
+            Set-ProcessMitigation -PolicyFilePath $currentPathTemp
+        }
     }
-
-    if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
-    {
-        # Set The Formatting
-        $xmlsettings = New-Object System.Xml.XmlWriterSettings
-        $xmlsettings.Indent = $true
-        $xmlsettings.IndentChars = "    "
-
-        # Set the File Name Create The Document
-        $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
-        $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
-
-        # Write the XML Decleration and set the XSL
-        $xmlWriter.WriteStartDocument()
-
-        # Start the Root Element
-        $xmlWriter.WriteStartElement("MitigationPolicy")
-
-        $xmlWriter.WriteStartElement("AppConfig")
-        $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
-
-        $xmlWriter.WriteStartElement($MitigationType)
-        $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
-        $xmlWriter.WriteEndElement()
-
-        # Write end process
-        $xmlWriter.WriteEndElement()
-
-        # Write end root
-        $xmlWriter.WriteEndElement()
-
-        # End, Finalize and close the XML Document
-        $xmlWriter.WriteEndDocument()
-        $xmlWriter.Flush()
-        $xmlWriter.Close()
-
-        Set-ProcessMitigation -PolicyFilePath $currentPathTemp
-    }
-
 }
 
 <#
@@ -379,8 +373,15 @@ function Convert-CurrentMitigations
     $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
     foreach ($mitigationTarget in  $CurrentMitigationsConverted)
     {
-        $targetName = $mitigationTarget.keys
-        $target = $currentMitigationsConverted.$targetName
+        if($mitigationTarget.Keys -eq "System")
+        {
+            $target = $currentMitigationsConverted.System
+        }
+        else
+        {
+            $targetName = $mitigationTarget.Keys
+            $target = $currentMitigationsConverted.$targetName
+        }
 
         foreach ($mitigationType in $mitigationTypes)
         {
@@ -546,7 +547,7 @@ function Get-CurrentProcessMitigationXml
 
         # Write Payload Settings
         $xmlWriter.WriteStartElement("Payload")
-        $xmlWriter.WriteAttributeString("EAFModules",$mitigation.Values.Payload.EAFModules)
+        $xmlWriter.WriteAttributeString("EAFModules","")
         $xmlWriter.WriteAttributeString("AuditEnableExportAddressFilterPlus",$mitigation.Values.Payload.AuditEnableExportAddressFilterPlus)
         $xmlWriter.WriteAttributeString("EnableRopStackPivot",$mitigation.Values.Payload.EnableRopStackPivot)
         $xmlWriter.WriteAttributeString("EnableExportAddressFilter",$mitigation.Values.Payload.EnableExportAddressFilter)
