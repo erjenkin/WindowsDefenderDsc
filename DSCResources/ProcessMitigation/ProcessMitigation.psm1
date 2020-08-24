@@ -48,7 +48,6 @@ function Get-TargetResource
         $currentMitigations = Get-CurrentProcessMitigation
     }
 
-    $currentMitigations = Get-CurrentProcessMitigation
     $currentMitigationsConverted = Convert-CurrentMitigations -CurrentMitigations $currentMitigations
     $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
     [xml] $returnValue = Get-Content $currentPath
@@ -224,12 +223,12 @@ function Test-TargetResource
                 }
             }
         }
-    }
 
-    if ($currentState.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
-    {
-        Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
-        $inDesiredState = $false
+        if ($currentState.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
+        {
+            Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+            $inDesiredState = $false
+        }
     }
 
     return $inDesiredState
