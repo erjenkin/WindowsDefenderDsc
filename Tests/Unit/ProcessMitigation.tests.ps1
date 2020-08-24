@@ -102,6 +102,18 @@ try
                 MitigationType = "DEP"
                 MitigationName = "OverrideDEP"
                 MitigationValue = "false"
+            },
+            @{
+                MitigationTarget = "System"
+                MitigationType = "DynamicCode"
+                MitigationName = "Audit"
+                MitigationValue = "true"
+            },
+            @{
+                MitigationTarget = "System"
+                MitigationType = "DynamicCode"
+                MitigationName = "Audit"
+                MitigationValue = "false"
             }
         )
 
@@ -133,6 +145,11 @@ try
                         [string] $resultCurrent = (Get-ProcessMitigation -Name $parameterSet.MitigationTarget).($parameterSet.MitigationType).($parameterSet.MitigationName)
                     }
 
+                    if($resultCurrent -eq "ON")
+                    {
+                        $resultCurrent = "true"
+                    }
+
                     if ($parameterSet.MitigationValue -eq $resultCurrent)
                     {
                         It 'Should return true'{
@@ -158,15 +175,20 @@ try
                     Set-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
                     $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
                     $resultSet = (Get-ProcessMitigation -Name $parameterSet.MitigationTarget).($parameterSet.MitigationType).($parameterSet.MitigationName)
-                    if ($parameterSet.MitigationValue -eq "false")
+
+                    if ($resultSet -eq "OFF" -or $resultSet -eq $false)
                     {
-                        It "Should be equal to $($parameterSet.MitigationValue)"{
-                            $resultSet | Should -be $false
-                        }
+                        $resultSet = "false"
                     }
-                    else {
+
+                    if($resultSet -eq $true)
+                    {
+                        $resultSet = "true"
+                    }
+
+                    if ($resultSet -eq $parameterSet.MitigationValue) {
                         It "Should be equal to $($parameterSet.MitigationValue)"{
-                            $resultSet | Should -be $true
+                            $result | Should -be $true
                         }
                     }
 
