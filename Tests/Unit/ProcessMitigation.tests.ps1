@@ -31,7 +31,7 @@ try
     InModuleScope 'ProcessMitigation' {
 
         Describe 'Get-CurrentProcessMitigation'{
-            Context 'Getting current Process Mitigation Settings' {
+            Context 'When getting current Process Mitigation Settings' {
                 $currentProcessMitigationResult = Get-CurrentProcessMitigation
 
                 It 'Should return 14 Mitigation types per target' {
@@ -49,7 +49,7 @@ try
         }
 
         Describe 'Convert-CurrentMitigations'{
-            Context 'Converting Values to True/False' {
+            Context 'When converting values to True/False' {
                 $currentProcessMitigationResult = Get-CurrentProcessMitigation
                 $convertCurrentMitigationsResult = Convert-CurrentMitigations -CurrentMitigations $currentProcessMitigationResult
 
@@ -66,7 +66,7 @@ try
         }
 
         Describe 'Get-CurrentProcessMitigationXml'{
-            Context 'Generating new XML from converted results' {
+            Context 'When generating new XML from converted results' {
                 $currentProcessMitigationResult = Get-CurrentProcessMitigation
                 $convertCurrentMitigationsResult = Convert-CurrentMitigations -CurrentMitigations $currentProcessMitigationResult
                 $CurrentProcessMitigationXml = Get-CurrentProcessMitigationXml -CurrentMitigationsConverted $convertCurrentMitigationsResult
@@ -120,7 +120,7 @@ try
         foreach ($parameterSet in $testParameters)
         {
             Describe 'Get-TargetResource'{
-                Context 'Testing Get-TargetResource function' {
+                Context 'When Get-TargetResource is called' {
                     $result = Get-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
 
                     It 'Should not throw'{
@@ -134,7 +134,7 @@ try
             }
 
             Describe 'Test-TargetResource'{
-                Context 'Testing Test-TargetResource function' {
+                Context 'When Test-TargetResource is called' {
                     $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
                     if ($parameterSet.MitigationTarget -eq "System")
                     {
@@ -170,7 +170,7 @@ try
             }
 
             Describe 'Set-TargetResource'{
-                Context 'Testing Set-TargetResource function' {
+                Context 'When Set-TargetResource is called' {
 
                     Set-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
                     $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
