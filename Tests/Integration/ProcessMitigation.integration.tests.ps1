@@ -23,15 +23,15 @@ try
     . $configFile
 
     <#
-        Because the ProcessMitigation module does not exist in a Server SKU 
+        Because the ProcessMitigation module does not exist in a Server SKU
         we can't run thorough Integration tests in AppVeyor
     #>
-    Describe "$($script:DSCResourceName)_Integration" {        
+    Describe "$($script:DSCResourceName)_Integration" {
         It 'Should compile the MOF without throwing' {
             {
                 & "$($script:DSCResourceName)_Config" -OutputPath $TestDrive
             } | Should Not Throw
-        }        
+        }
     }
 }
 finally

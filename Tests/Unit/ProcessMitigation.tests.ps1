@@ -3,7 +3,7 @@
 
 # Unit Test Template Version: 1.2.1
 $script:moduleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-if ( (-not (Test-Path -Path (Join-Path -Path $script:moduleRoot -ChildPath 'DSCResource.Tests'))) -or `
+if ((-not (Test-Path -Path (Join-Path -Path $script:moduleRoot -ChildPath 'DSCResource.Tests'))) -or `
      (-not (Test-Path -Path (Join-Path -Path $script:moduleRoot -ChildPath 'DSCResource.Tests\TestHelper.psm1'))) )
 {
     & git @('clone','https://github.com/PowerShell/DscResource.Tests.git',(Join-Path -Path $script:moduleRoot -ChildPath 'DSCResource.Tests'))
@@ -29,191 +29,176 @@ function Invoke-TestCleanup {
 try
 {
     InModuleScope 'ProcessMitigation' {
-        Import-Module -Name $PSScriptRoot\ProcessMitigationsStub.psm1 -Force
-        $mockPolicyStrings = @(
-            'Dep'
-            'Aslr'
-            'StrictHandle'
-            'SystemCall'
-            'ExtensionPoint'
-            'DynamicCode'
-            'Cfg'
-            'BinarySignature'
-            'FontDisable'
-            'ImageLoad'
-            'Payload'
-            'SEHOP'
-            'Heap'
-            'ChildProcess'
+
+        Describe 'Get-CurrentProcessMitigation'{
+            Context 'When getting current Process Mitigation Settings' {
+                $currentProcessMitigationResult = Get-CurrentProcessMitigation
+
+                It 'Should return 14 Mitigation types per target' {
+                    $currentProcessMitigationResult[0].Values.Keys.Count | Should -Be 14
+                }
+
+                It 'Should return 14 Mitigation Names per target' {
+                    $currentProcessMitigationResult[0].Values.Values.Count | Should -Be 14
+                }
+
+                It 'Should return type object array' {
+                    $currentProcessMitigationResult.GetType().Name | Should -Be 'Object[]'
+                }
+            }
+        }
+
+        Describe 'Convert-CurrentMitigations'{
+            Context 'When converting values to True/False' {
+                $currentProcessMitigationResult = Get-CurrentProcessMitigation
+                $convertCurrentMitigationsResult = Convert-CurrentMitigations -CurrentMitigations $currentProcessMitigationResult
+
+                It 'Should return only values of true or false' {
+                    $convertCurrentMitigationsResult.values.values.values | Should -Contain 'false'
+                    $convertCurrentMitigationsResult.values.values.values | Should -Contain 'true'
+                }
+
+                It 'Should not contain the values ON or OFF' {
+                    $convertCurrentMitigationsResult.values.values.values -match 'ON' | Should -BeFalse
+                    $convertCurrentMitigationsResult.values.values.values -match 'OFF'| Should -BeFalse
+                }
+            }
+        }
+
+        Describe 'Get-CurrentProcessMitigationXml'{
+            Context 'When generating new XML from converted results' {
+                $currentProcessMitigationResult = Get-CurrentProcessMitigation
+                $convertCurrentMitigationsResult = Convert-CurrentMitigations -CurrentMitigations $currentProcessMitigationResult
+                $CurrentProcessMitigationXml = Get-CurrentProcessMitigationXml -CurrentMitigationsConverted $convertCurrentMitigationsResult
+
+                It 'Should return the path of the new xml'{
+                    $CurrentProcessMitigationXml | Should -BeLike "*\AppData\Local\Temp\MitigationsCurrent.xml"
+                }
+            }
+        }
+
+
+        $testParameters = @(
+            @{
+                MitigationTarget = "winword.exe"
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "true"
+            },
+            @{
+                MitigationTarget = "{0}_{1}" -f "DOESNTEXIST", (Get-Random)
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "true"
+            },
+            @{
+                MitigationTarget = "winword.exe"
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "false"
+            },
+            @{
+                MitigationTarget = "System"
+                MitigationType = "DEP"
+                MitigationName = "OverrideDEP"
+                MitigationValue = "false"
+            },
+            @{
+                MitigationTarget = "System"
+                MitigationType = "DynamicCode"
+                MitigationName = "Audit"
+                MitigationValue = "true"
+            },
+            @{
+                MitigationTarget = "System"
+                MitigationType = "DynamicCode"
+                MitigationName = "Audit"
+                MitigationValue = "false"
+            }
         )
 
-        $getProcessMitigationMock = @{
-            Heap  = @{
-                TerminateOnError = 'ON'
-            }
-            SEHOP = @{
-                Enable                = 'OFF'
-                BlockRemoteImageLoads = 'NOTSET'
-            }
-            DEP   = @{
-                Enable           = 'ON'
-                EmulateAtlThunks = 'NOTSET'
-            }
-            ASLR  = @{
-                BottomUp = 'OFF'
-            }
-        }
+        foreach ($parameterSet in $testParameters)
+        {
+            Describe 'Get-TargetResource'{
+                Context 'When Get-TargetResource is called' {
+                    $result = Get-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
 
-        Describe 'Get-TargetResource' {
-            Context 'MitigationTarget is System' {
+                    It 'Should not throw'{
+                        {Get-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
+                    }
 
-                Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
-                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
-                $result = Get-TargetResource -MitigationTarget SYSTEM -Enable TerminateOnError -Disable SEHOP, BlockRemoteImageLoads
-
-                It 'Should return expected values for Enabled' {
-                    $result.Enable | Should -Be 'TerminateOnError'
-                }
-
-                It 'Should return expected values for Disabled' {
-                    $result.Disable | Should -Be 'SEHOP'
-                }
-
-                It 'Should return expected values for Default' {
-                    $result.Default | Should -Be 'BlockRemoteImageLoads'
+                    It 'Should return and xml'{
+                    $result | Should -BeOfType System.Xml.XmlNode
+                    }
                 }
             }
 
-            Context 'MitigationTarget is not System' {
-                Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
-                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
-                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
+            Describe 'Test-TargetResource'{
+                Context 'When Test-TargetResource is called' {
+                    $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
+                    if ($parameterSet.MitigationTarget -eq "System")
+                    {
+                        [string] $resultCurrent = (Get-ProcessMitigation -System).($parameterSet.MitigationType).($parameterSet.MitigationName)
+                    }
+                    else
+                    {
+                        [string] $resultCurrent = (Get-ProcessMitigation -Name $parameterSet.MitigationTarget).($parameterSet.MitigationType).($parameterSet.MitigationName)
+                    }
 
-                It 'Should return expected values for Enabled' {
-                    $result.Enable | Should be 'DEP'
-                }
+                    if($resultCurrent -eq "ON")
+                    {
+                        $resultCurrent = "true"
+                    }
 
-                It 'Should return expected values for Disabled' {
-                    $result.Disable | Should Be 'BottomUp'
-                }
+                    if ($parameterSet.MitigationValue -eq $resultCurrent)
+                    {
+                        It 'Should return true'{
+                            $result | Should -Be $true
+                        }
+                    }
+                    else
+                    {
+                        It 'Should return false'{
+                            $result | Should -Be $false
+                        }
+                    }
 
-                It 'Should return expected values for Default' {
-                    $result.Default | Should Be 'BlockRemoteImageLoads'
-                }
-            }
-
-            Context 'Test when multiple Mitigations are returned per property' {
-                Mock -CommandName Get-ProcessMitigation -MockWith { $getProcessMitigationMock }
-                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
-                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads, SEHOP, EmulateAtlThunks, TerminateOnError
-
-                It 'Should return expected values for Enabled' {
-                    ($result.Enable | Sort-Object) | Should be ('DEP', 'TerminateOnError' | Sort-Object)
-                }
-                
-                It 'Should return expected values for Disabled' {
-                    ($result.Disable | Sort-Object) | Should be ('BottomUp', 'SEHOP' | Sort-Object)
-                }
-                
-                It 'Should return expected values for Default' {
-                    ($result.Default | Sort-Object) | Should be ('EmulateAtlThunks', 'BlockRemoteImageLoads' | Sort-Object)
-                }
-            }
-
-            Context 'Return hashtable should not have empty elements' {
-                Mock -CommandName Get-ProcessMitigation
-                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
-
-                It 'Enable Should be NULL' {
-                    $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
-                    [string]::IsNullOrWhiteSpace($result.Enable) | Should Be $true
-                }
-
-                It 'Disable Should be NULL' {
-                    $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BlockRemoteImageLoads
-                    [string]::IsNullOrWhiteSpace($result.Disable) | Should Be $true
-                }
-
-                It 'Default Should be NULL' {
-                    $result = Get-TargetResource -MitigationTarget SYSTEM -Enable BottomUp
-                    [string]::IsNullOrWhiteSpace($result.Default) | Should Be $true
+                    It 'Should not throw'{
+                        {Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
+                    }
                 }
             }
 
-            Context 'Return hashtable values should be array' {
-                Mock -CommandName Get-ProcessMitigation -MockWith {$getProcessMitigationMock}
-                Mock -CommandName Get-PolicyString -MockWith { $mockPolicyStrings }
-                $result = Get-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP -Disable BottomUp, BlockRemoteImageLoads
+            Describe 'Set-TargetResource'{
+                Context 'When Set-TargetResource is called' {
 
-                It 'Should be an array' {
-                    $result.Enable -is [array] | Should Be $true
-                    $result.Disable -is [array] | Should Be $true
-                    $result.Default -is [array] | Should Be $true
-                }
-            }
-        }
+                    Set-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
+                    $result = Test-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
+                    $resultSet = (Get-ProcessMitigation -Name $parameterSet.MitigationTarget).($parameterSet.MitigationType).($parameterSet.MitigationName)
 
-        Describe 'Test-TargetResource' {
-            $mockGetTargetResource = @{
-                MitigationTarget = 'SYSTEM'
-                Enable           = 'DEP', 'TerminateOnError'
-                Disable          = 'BlockRemoteImageLoads'
-                Default          = 'BottomUp', 'EmulateAtlThunks'
-            }
+                    if ($resultSet -eq "OFF" -or $resultSet -eq $false)
+                    {
+                        $resultSet = "false"
+                    }
 
-            Mock -CommandName 'Get-TargetResource' -MockWith {$mockGetTargetResource}
+                    if($resultSet -eq $true)
+                    {
+                        $resultSet = "true"
+                    }
 
-            Context 'Not in a desired state' {
-                It 'Should return FALSE when Enable is not in a desired state' {
-                    $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP', 'TelemetryOnly'
-                    $result | Should Be $false
-                }
+                    if ($resultSet -eq $parameterSet.MitigationValue) {
+                        It "Should be equal to $($parameterSet.MitigationValue)"{
+                            $result | Should -be $true
+                        }
+                    }
 
-                It 'Should return FALSE when Disable is not in a desired state' {
-                    $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP' -Disable 'TerminateOnError'
-                    $result | Should Be $false
-                }
-
-                It 'Should return FALSE when policy is default' {
-                    $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP', 'BottomUp'
-                    $result | Should Be $false
-                }
-            }
-
-            Context 'In a desired state' {
-                It 'Should be TRUE when Enable is in a desired state' {
-                    $result = Test-TargetResource -MitigationTarget SYSTEM -Enable 'DEP'
-                    $result | Should Be $true
-                }
-
-                It 'Should be TRUE when Disable is in a desired state' {
-                    $result = Test-TargetResource -MitigationTarget SYSTEM -Disable 'BlockRemoteImageLoads'
-                    $result | Should Be $true
-                }
-            }
-        }
-
-        Describe 'Set-TargetResource' {
-            Context 'When MitigationTarget is SYSTEM' {
-                Mock -CommandName 'Set-ProcessMitigation'
-                Set-TargetResource -MitigationTarget SYSTEM -Enable DEP
-
-                It 'Should Set SYSTEM' {
-                    Assert-MockCalled Set-ProcessMitigation -Times 1 -ParameterFilter { $System -eq $true }
-                }
-            }
-
-            Context 'When MitigationTarget is not SYSTEM' {
-                Mock -CommandName 'Set-ProcessMitigation'
-                Set-TargetResource -MitigationTarget 'notepad.exe' -Enable DEP
-
-                It 'Should Set notepad' {
-                    Assert-MockCalled Set-ProcessMitigation -Times 1 -ParameterFilter { $Name -eq 'notepad.exe' }
+                    It 'Should not throw'{
+                        {Set-TargetResource -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
+                    }
                 }
             }
         }
     }
-
 }
 finally
 {
