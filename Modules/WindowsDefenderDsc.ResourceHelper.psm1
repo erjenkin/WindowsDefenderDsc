@@ -4,7 +4,7 @@
         Falls back to en-US strings if the machine's culture is not supported.
 
     .PARAMETER ResourceName
-        The name of the resource as it appears before '.strings.psd1' of the localized string file.        
+        The name of the resource as it appears before '.strings.psd1' of the localized string file.
 #>
 function Get-LocalizedData
 {

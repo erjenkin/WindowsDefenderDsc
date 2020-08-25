@@ -13,12 +13,17 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 ## ProcessMitigation
 
 * **MitigationTarget**: Name of the process to apply mitigation settings to.
-* **Enable**: List of mitigations to enable.
-* **Disable**: List of mitigations to disable.
+* **MitigationType**: Type of mitigation to apply to process.
+* **MitigationName**: Name of mitigation to apply to process.
+* **MitigationValue**: Value of mitigation to apply to process (true/false).
 
 ## Versions
 
 ### Unreleased
+
+### 2.0.0
+
+* Update WindowsDefenderDSC to use export current state as XML for all settings.
 
 ### 1.0.0.0
 
@@ -29,8 +34,7 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 
 ### Enable/Disable process mitigations on SYSTEM and msfeedsync.exe
 
-In the following example configuration, the DEP and SEHOP process mitigations are enabled while disabling TermindateOnError.
-Additionally, the CFG process mitigation is enabled while StictHandle is disabled.
+In the following example configuration, the Non System fonts are disabled on Firefox.exe, while Control Flow Gaurd is enabled on msfeedssync.exe.
 
 ```PowerShell
 configuration SYSTEM_MSFeedSync
@@ -39,18 +43,20 @@ configuration SYSTEM_MSFeedSync
     Import-DscResource -ModuleName WindowsDefenderDsc
     node localhost
     {
-        ProcessMitigation SYSTEM
+        ProcessMitigation Firefox
         {
-            MitigationTarget = 'SYSTEM'
-            Enable           = 'DEP', 'SEHOP'
-            Disable          = 'TerminateOnError'
+            MitigationTarget = 'firefox.exe'
+            MitigationType   = 'fonts'
+            MitigationName   = 'DisableNonSystemFonts'
+            MitigationValue  = 'true'
         }
 
         ProcessMitigation msfeedssync
         {
             MitigationTarget = 'msfeedssync.exe'
-            Enable = 'CFG'
-            Disable = 'StrictHandle'
+            MitigationType   = 'ControlFlowGaurd'
+            MitigationName   = 'Enable'
+            MitigationValue  = 'true'
         }
     }
 }
