@@ -9,11 +9,13 @@ $script:localizedData = Get-LocalizedData -ResourceName 'ProcessMitigation' -Res
     .SYNOPSIS
         Gets the current state of a process mitigation
     .PARAMETER MitigationTarget
-        Name of the process to apply mitigation settings to.
-    .PARAMETER Enable
-        List of mitigations to enable.
-    .PARAMETER Disable
-        List of mitigations to disable.
+        Name of the target mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationType
+        Type of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationName
+        Name of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationValue
+        Value of the mitigation process to apply mitigation settings to.
 #>
 function Get-TargetResource
 {
@@ -41,7 +43,7 @@ function Get-TargetResource
 
 
     $currentMitigations = Get-CurrentProcessMitigation
-    $currentMitigationsConverted = Convert-CurrentMitigations -CurrentMitigations $currentMitigations
+    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentMitigations
     $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
     [xml] $returnValue = Get-Content $currentPath
 
@@ -52,11 +54,13 @@ function Get-TargetResource
     .SYNOPSIS
         Sets the current state of a process mitigation
     .PARAMETER MitigationTarget
-        Name of the process to apply mitigation settings to.
-    .PARAMETER Enable
-        List of mitigations to enable.
-    .PARAMETER Disable
-        List of mitigations to disable.
+        Name of the target mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationType
+        Type of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationName
+        Name of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationValue
+        Value of the mitigation process to apply mitigation settings to.
 #>
 function Set-TargetResource
 {
@@ -163,11 +167,13 @@ function Set-TargetResource
     .SYNOPSIS
         Tests the current state of a process mitigation
     .PARAMETER MitigationTarget
-        Name of the process to apply mitigation settings to.
-    .PARAMETER Enable
-        List of mitigations to enable.
-    .PARAMETER Disable
-        List of mitigations to disable.
+        Name of the target mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationType
+        Type of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationName
+        Name of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationValue
+        Value of the mitigation process to apply mitigation settings to.
 #>
 function Test-TargetResource
 {
@@ -205,7 +211,6 @@ function Test-TargetResource
     }
     else
     {
-        # verify policies in Enable are in a desired state
         foreach ($mitigation in $currentState.MitigationPolicy.AppConfig)
         {
             if ($mitigation.Executable -eq $MitigationTarget)
@@ -228,6 +233,13 @@ function Test-TargetResource
     return $inDesiredState
 }
 
+<#
+    .SYNOPSIS
+        Gets the current state of a process mitigation via Get-ProcessMitigation commands and stores in a hashtable
+    .DESCRIPTION
+        The Get-ProcessMitigation command returns several different object types that must be converted to a hashtable
+        for further processing.
+#>
 function Get-CurrentProcessMitigation
 {
     [CmdletBinding()]
@@ -357,16 +369,16 @@ function Get-CurrentProcessMitigation
     return $resultCurrentMitigations
 }
 
-function Convert-CurrentMitigations
+<#
+    .SYNOPSIS
+        Converts the the process mitigation found in Get-CurrentProcessMitigation
+    .DESCRIPTION
+        The Get-CurrentProcessMitigation command returns values of ON,OFF,NOTSET ,which must be converted to true/false for processing via xml.
+#>
+function Convert-CurrentMitigation
 {
     [CmdletBinding()]
     [OutputType([xml])]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [object[]]
-        $CurrentMitigations
-    )
 
     $currentMitigationsConverted = @()
     $currentMitigationsConverted = Get-CurrentProcessMitigation
@@ -410,6 +422,14 @@ function Convert-CurrentMitigations
     return $currentMitigationsConverted
 }
 
+<#
+    .SYNOPSIS
+        Converts the the process mitigation converted in Convert-CurrentMitigation function
+    .DESCRIPTION
+        The this function uses the converted process mitigation to generate an xml that can be used via Set-ProcessMitigation -PolicyFilePath .\example.xml.
+    .PARAMETER CurrentMitigationsConverted
+        Converted process mitigations found via Convert-CurrentMitigation.
+#>
 function Get-CurrentProcessMitigationXml
 {
     [CmdletBinding()]
