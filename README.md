@@ -21,6 +21,10 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 
 ### Unreleased
 
+### 2.0.0
+
+* Update WindowsDefenderDSC to use export current state as XML for all settings.
+
 ### 1.0.0.0
 
 * Intiial release with the following resources:
