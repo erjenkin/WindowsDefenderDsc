@@ -7,7 +7,7 @@ Import-Module -Name (Join-Path -Path $modulePath `
 $script:localizedData = Get-LocalizedData -ResourceName 'ProcessMitigation' -ResourcePath (Split-Path -Parent $Script:MyInvocation.MyCommand.Path)
 <#
     .SYNOPSIS
-        Gets the current state of a process mitigation
+        Gets the current state of a process mitigation, returns a hashtable
     .PARAMETER MitigationTarget
         Name of the target mitigation process to apply mitigation settings to.
     .PARAMETER MitigationType
@@ -42,10 +42,12 @@ function Get-TargetResource
     )
 
 
-    $currentMitigations = Get-CurrentProcessMitigation
-    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentMitigations
-    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
-    [xml] $returnValue = Get-Content $currentPath
+    $returnValue = @{
+        MitigationTarget = $MitigationTarget
+        MitigationType   = $MitigationType
+        MitigationName   = $MitigationName
+        MitigationValue  = $MitigationValue
+    }
 
     return $returnValue
 }
@@ -84,7 +86,7 @@ function Set-TargetResource
         $MitigationValue
     )
 
-    $currentState = Get-TargetResource @PSBoundParameters
+    $currentState = Get-TargetResourceSettings @PSBoundParameters
     if ($mitigationTarget -eq "System")
     {
         $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
@@ -199,7 +201,7 @@ function Test-TargetResource
     )
 
     $inDesiredState = $true
-    $currentState = Get-TargetResource @PSBoundParameters
+    $currentState = Get-TargetResourceSettings @PSBoundParameters
 
     if ($mitigationTarget -eq "System")
     {
@@ -622,4 +624,50 @@ function Get-CurrentProcessMitigationXml
     $xmlWriter.Close()
 
     return $currentPath
+}
+
+
+<#
+    .SYNOPSIS
+        Gets the current state of a process mitigation
+    .PARAMETER MitigationTarget
+        Name of the target mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationType
+        Type of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationName
+        Name of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationValue
+        Value of the mitigation process to apply mitigation settings to.
+#>
+function Get-TargetResourceSettings
+{
+    [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
+
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationTarget,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationType,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationName,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationValue
+    )
+
+
+    $currentMitigations = Get-CurrentProcessMitigation
+    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentMitigations
+    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
+    [xml] $returnValue = Get-Content $currentPath
+
+    return $returnValue
 }
