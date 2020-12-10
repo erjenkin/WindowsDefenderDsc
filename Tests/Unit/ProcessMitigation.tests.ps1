@@ -132,21 +132,6 @@ try
                     }
                 }
             }
-            
-            
-            Describe 'Get-TargetResourceSettings'{
-                Context 'When Get-TargetResourceSettings is called' {
-                    $result = Get-TargetResourceSettings -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue
-
-                    It 'Should not throw'{
-                        {Get-TargetResourceSettings -MitigationTarget $parameterSet.MitigationTarget -MitigationType $parameterSet.MitigationType -MitigationName $parameterSet.MitigationName -MitigationValue $parameterSet.MitigationValue} | Should -Not -Throw
-                    }
-
-                    It 'Should return and xml'{
-                    $result | Should -BeOfType System.Xml.XmlNode
-                    }
-                }
-            }
 
             Describe 'Test-TargetResource'{
                 Context 'When Test-TargetResource is called' {

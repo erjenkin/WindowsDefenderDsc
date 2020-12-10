@@ -7,7 +7,7 @@ Import-Module -Name (Join-Path -Path $modulePath `
 $script:localizedData = Get-LocalizedData -ResourceName 'ProcessMitigation' -ResourcePath (Split-Path -Parent $Script:MyInvocation.MyCommand.Path)
 <#
     .SYNOPSIS
-        Gets the current state of a process mitigation, returns a hashtable
+        Gets the current state of a process mitigation
     .PARAMETER MitigationTarget
         Name of the target mitigation process to apply mitigation settings to.
     .PARAMETER MitigationType
@@ -41,214 +41,8 @@ function Get-TargetResource
         $MitigationValue
     )
 
-
-    $returnValue = @{
-        MitigationTarget = $MitigationTarget
-        MitigationType   = $MitigationType
-        MitigationName   = $MitigationName
-        MitigationValue  = $MitigationValue
-    }
-
-    return $returnValue
-}
-
-<#
-    .SYNOPSIS
-        Sets the current state of a process mitigation
-    .PARAMETER MitigationTarget
-        Name of the target mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationType
-        Type of the mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationName
-        Name of the mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationValue
-        Value of the mitigation process to apply mitigation settings to.
-#>
-function Set-TargetResource
-{
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationTarget,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationType,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationName,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationValue
-    )
-
-    $currentState = Get-TargetResourceSettings @PSBoundParameters
-    if ($mitigationTarget -eq "System")
-    {
-        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
-    }
-    else
-    {
-        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
-    }
-
-    [xml]$currentXml = Get-Content $currentPath
-
-    if ($mitigationTarget -eq "System")
-    {
-        if ($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
-        {
-            $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
-            $currentXml.Save($currentPath)
-            Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-            Set-ProcessMitigation -PolicyFilePath $currentPath
-        }
-    }
-    else {
-        foreach ($mitigation in $currentXml.MitigationPolicy.AppConfig)
-        {
-            if ($mitigation.Executable -eq $MitigationTarget)
-            {
-               if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
-               {
-                    $mitigation.$mitigationType.$mitigationName = $mitigationValue
-                    $currentXml.Save($currentPath)
-                    Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-                    Set-ProcessMitigation -PolicyFilePath $currentPath
-               }
-            }
-        }
-
-
-        if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
-        {
-            # Set The Formatting
-            $xmlsettings = New-Object System.Xml.XmlWriterSettings
-            $xmlsettings.Indent = $true
-            $xmlsettings.IndentChars = "    "
-
-            # Set the File Name Create The Document
-            $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
-            $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
-
-            # Write the XML Decleration and set the XSL
-            $xmlWriter.WriteStartDocument()
-
-            # Start the Root Element
-            $xmlWriter.WriteStartElement("MitigationPolicy")
-
-            $xmlWriter.WriteStartElement("AppConfig")
-            $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
-
-            $xmlWriter.WriteStartElement($MitigationType)
-            $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
-            $xmlWriter.WriteEndElement()
-
-            # Write end process
-            $xmlWriter.WriteEndElement()
-
-            # Write end root
-            $xmlWriter.WriteEndElement()
-
-            # End, Finalize and close the XML Document
-            $xmlWriter.WriteEndDocument()
-            $xmlWriter.Flush()
-            $xmlWriter.Close()
-
-
-            Set-ProcessMitigation -PolicyFilePath $currentPathTemp
-        }
-    }
-}
-
-<#
-    .SYNOPSIS
-        Tests the current state of a process mitigation
-    .PARAMETER MitigationTarget
-        Name of the target mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationType
-        Type of the mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationName
-        Name of the mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationValue
-        Value of the mitigation process to apply mitigation settings to.
-#>
-function Test-TargetResource
-{
-    [CmdletBinding()]
-    [OutputType([System.Boolean])]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationTarget,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationType,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationName,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationValue
-    )
-
-    $inDesiredState = $true
-    $currentState = Get-TargetResourceSettings @PSBoundParameters
-
-    if ($mitigationTarget -eq "System")
-    {
-        if ($currentState.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
-        {
-            Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
-            $inDesiredState = $false
-        }
-    }
-    else
-    {
-        foreach ($mitigation in $currentState.MitigationPolicy.AppConfig)
-        {
-            if ($mitigation.Executable -eq $MitigationTarget)
-            {
-                if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
-                {
-                    Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
-                    $inDesiredState = $false
-                }
-            }
-        }
-
-        if ($currentState.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
-        {
-            Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
-            $inDesiredState = $false
-        }
-    }
-
-    return $inDesiredState
-}
-
-<#
-    .SYNOPSIS
-        Gets the current state of a process mitigation via Get-ProcessMitigation commands and stores in a hashtable
-    .DESCRIPTION
-        The Get-ProcessMitigation command returns several different object types that must be converted to a hashtable
-        for further processing.
-#>
-function Get-CurrentProcessMitigation
-{
-    [CmdletBinding()]
-    [OutputType([System.Collections.Hashtable])]
-
     $currentMitigation = @()
-    [hashtable[]]$resultCurrentMitigations = @()
+    $resultCurrentMitigations = @()
     if ($mitigationTarget -eq "System")
     {
         $currentMitigation = Get-ProcessMitigation -System
@@ -371,6 +165,193 @@ function Get-CurrentProcessMitigation
     return $resultCurrentMitigations
 }
 
+
+<#
+    .SYNOPSIS
+        Sets the current state of a process mitigation
+    .PARAMETER MitigationTarget
+        Name of the target mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationType
+        Type of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationName
+        Name of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationValue
+        Value of the mitigation process to apply mitigation settings to.
+#>
+function Set-TargetResource
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationTarget,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationType,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationName,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationValue
+    )
+
+    $currentState = Get-TargetResource @PSBoundParameters
+    if ($mitigationTarget -eq "System")
+    {
+        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+    }
+    else
+    {
+        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+    }
+
+    [xml]$currentXml = Get-Content $currentPath
+
+    if ($mitigationTarget -eq "System")
+    {
+        if ($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
+        {
+            $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
+            $currentXml.Save($currentPath)
+            Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
+            Set-ProcessMitigation -PolicyFilePath $currentPath
+        }
+    }
+    else {
+        foreach ($mitigation in $currentXml.MitigationPolicy.AppConfig)
+        {
+            if ($mitigation.Executable -eq $MitigationTarget)
+            {
+               if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
+               {
+                    $mitigation.$mitigationType.$mitigationName = $mitigationValue
+                    $currentXml.Save($currentPath)
+                    Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
+                    Set-ProcessMitigation -PolicyFilePath $currentPath
+               }
+            }
+        }
+
+
+        if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
+        {
+            # Set The Formatting
+            $xmlsettings = New-Object System.Xml.XmlWriterSettings
+            $xmlsettings.Indent = $true
+            $xmlsettings.IndentChars = "    "
+
+            # Set the File Name Create The Document
+            $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
+            $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
+
+            # Write the XML Decleration and set the XSL
+            $xmlWriter.WriteStartDocument()
+
+            # Start the Root Element
+            $xmlWriter.WriteStartElement("MitigationPolicy")
+
+            $xmlWriter.WriteStartElement("AppConfig")
+            $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
+
+            $xmlWriter.WriteStartElement($MitigationType)
+            $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
+            $xmlWriter.WriteEndElement()
+
+            # Write end process
+            $xmlWriter.WriteEndElement()
+
+            # Write end root
+            $xmlWriter.WriteEndElement()
+
+            # End, Finalize and close the XML Document
+            $xmlWriter.WriteEndDocument()
+            $xmlWriter.Flush()
+            $xmlWriter.Close()
+
+
+            Set-ProcessMitigation -PolicyFilePath $currentPathTemp
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+        Tests the current state of a process mitigation
+    .PARAMETER MitigationTarget
+        Name of the target mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationType
+        Type of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationName
+        Name of the mitigation process to apply mitigation settings to.
+    .PARAMETER MitigationValue
+        Value of the mitigation process to apply mitigation settings to.
+#>
+function Test-TargetResource
+{
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationTarget,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationType,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationName,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $MitigationValue
+    )
+
+    $inDesiredState = $true
+    $currentState = Get-TargetResource @PSBoundParameters
+    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentState
+    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
+    [xml] $currentStateXml = Get-Content $currentPath
+
+    if ($mitigationTarget -eq "System")
+    {
+        if ($currentStateXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
+        {
+            Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+            $inDesiredState = $false
+        }
+    }
+    else
+    {
+        foreach ($mitigation in $currentStateXml.MitigationPolicy.AppConfig)
+        {
+            if ($mitigation.Executable -eq $MitigationTarget)
+            {
+                if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
+                {
+                    Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+                    $inDesiredState = $false
+                }
+            }
+        }
+
+        if ($currentStateXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
+        {
+            Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
+            $inDesiredState = $false
+        }
+    }
+
+    return $inDesiredState
+}
+
 <#
     .SYNOPSIS
         Converts the the process mitigation found in Get-CurrentProcessMitigation
@@ -381,20 +362,24 @@ function Convert-CurrentMitigation
 {
     [CmdletBinding()]
     [OutputType([xml])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [object[]]
+        $CurrentMitigations
+    )
 
-    $currentMitigationsConverted = @()
-    $currentMitigationsConverted = Get-CurrentProcessMitigation
     $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
-    foreach ($mitigationTarget in  $CurrentMitigationsConverted)
+    foreach ($mitigationTarget in  $CurrentMitigations)
     {
         if($mitigationTarget.Keys -eq "System")
         {
-            $target = $currentMitigationsConverted.System
+            $target = $CurrentMitigations.System
         }
         else
         {
             $targetName = $mitigationTarget.Keys
-            $target = $currentMitigationsConverted.$targetName
+            $target = $CurrentMitigations.$targetName
         }
 
         foreach ($mitigationType in $mitigationTypes)
@@ -421,7 +406,7 @@ function Convert-CurrentMitigation
         }
     }
 
-    return $currentMitigationsConverted
+    return $CurrentMitigations
 }
 
 <#
@@ -624,50 +609,4 @@ function Get-CurrentProcessMitigationXml
     $xmlWriter.Close()
 
     return $currentPath
-}
-
-
-<#
-    .SYNOPSIS
-        Gets the current state of a process mitigation
-    .PARAMETER MitigationTarget
-        Name of the target mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationType
-        Type of the mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationName
-        Name of the mitigation process to apply mitigation settings to.
-    .PARAMETER MitigationValue
-        Value of the mitigation process to apply mitigation settings to.
-#>
-function Get-TargetResourceSettings
-{
-    [CmdletBinding()]
-    [OutputType([System.Collections.Hashtable])]
-
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationTarget,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationType,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationName,
-
-        [Parameter(Mandatory = $true)]
-        [string]
-        $MitigationValue
-    )
-
-
-    $currentMitigations = Get-CurrentProcessMitigation
-    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentMitigations
-    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
-    [xml] $returnValue = Get-Content $currentPath
-
-    return $returnValue
 }
