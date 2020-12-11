@@ -162,7 +162,6 @@ function Get-TargetResource
         }
     }
 
-    #Convert to correct values for xml
     $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
     foreach ($target in  $resultCurrentMitigations.GetEnumerator())
     {
