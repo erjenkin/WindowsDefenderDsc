@@ -101,7 +101,7 @@ try
                 MitigationTarget = "System"
                 MitigationType = "DEP"
                 MitigationName = "OverrideDEP"
-                MitigationValue = "false"
+                MitigationValue = "true"
             },
             @{
                 MitigationTarget = "System"
