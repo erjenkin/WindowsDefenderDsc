@@ -42,7 +42,7 @@ function Get-TargetResource
     )
 
     $currentMitigation = @()
-    $resultCurrentMitigations = @()
+    [hashtable[]]$resultCurrentMitigations = @()
     if ($mitigationTarget -eq "System")
     {
         $currentMitigation = Get-ProcessMitigation -System
@@ -162,9 +162,55 @@ function Get-TargetResource
         }
     }
 
-    return $resultCurrentMitigations
-}
+    #Convert the values found into True/False for Xml
+    $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
+    foreach ($target in  $resultCurrentMitigations.GetEnumerator())
+    {
+        if($target.Keys -eq "System")
+        {
+            $target = $resultCurrentMitigations.System
+        }
+        else
+        {
+            $targetName = $target.Keys
+            $target = $resultCurrentMitigations.$targetName
+        }
 
+        foreach ($mitigationTypeName in $mitigationTypes)
+        {
+            [string[]] $mitigationKeys = $target.$mitigationTypeName.Keys
+            foreach ($mitigationKey in $mitigationKeys)
+            {
+                $targetKey = $target.$mitigationTypeName.$mitigationKey
+                if ($targetKey -match "ON|True")
+                {
+                    $target.$mitigationTypeName.$mitigationKey =  "true"
+                }
+
+                if ($targetKey -match "False|OFF")
+                {
+                    $target.$mitigationTypeName.$mitigationKey =  "false"
+                }
+
+                if ($targetKey -match 'NOTSET' -or $targetKey.count -lt 1)
+                {
+                    $target.$mitigationTypeName.Remove($mitigationkey)
+                }
+            }
+        }
+    }
+
+    $returnVariable = @{
+
+        MitigationTarget = $mitigationTarget
+        MitigationType   = $mitigationType
+        MitigationName   = $mitigationName
+        MitigationValue  = $resultCurrentMitigations.$mitigationTarget.$mitigationType.$mitigationName
+
+    }
+
+    return $returnVariable
+}
 
 <#
     .SYNOPSIS
@@ -316,8 +362,7 @@ function Test-TargetResource
 
     $inDesiredState = $true
     $currentState = Get-TargetResource @PSBoundParameters
-    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentState
-    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
+    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentState
     [xml] $currentStateXml = Get-Content $currentPath
 
     if ($mitigationTarget -eq "System")
@@ -350,63 +395,6 @@ function Test-TargetResource
     }
 
     return $inDesiredState
-}
-
-<#
-    .SYNOPSIS
-        Converts the the process mitigation found in Get-CurrentProcessMitigation
-    .DESCRIPTION
-        The Get-CurrentProcessMitigation command returns values of ON,OFF,NOTSET ,which must be converted to true/false for processing via xml.
-#>
-function Convert-CurrentMitigation
-{
-    [CmdletBinding()]
-    [OutputType([xml])]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [object[]]
-        $CurrentMitigations
-    )
-
-    $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
-    foreach ($mitigationTarget in  $CurrentMitigations)
-    {
-        if($mitigationTarget.Keys -eq "System")
-        {
-            $target = $CurrentMitigations.System
-        }
-        else
-        {
-            $targetName = $mitigationTarget.Keys
-            $target = $CurrentMitigations.$targetName
-        }
-
-        foreach ($mitigationType in $mitigationTypes)
-        {
-            [string[]] $mitigationKeys = $target.$mitigationType.Keys
-            foreach ($mitigationKey in $mitigationKeys)
-            {
-                $targetKey = $target.$mitigationType.$mitigationKey
-                if ($targetKey -match "ON|True")
-                {
-                    $target.$mitigationType.$mitigationKey =  "true"
-                }
-
-                if ($targetKey -match "False|OFF")
-                {
-                    $target.$mitigationType.$mitigationKey =  "false"
-                }
-
-                if ($targetKey -match 'NOTSET' -or $targetKey.count -lt 1)
-                {
-                    $target.$mitigationType.Remove($mitigationkey)
-                }
-            }
-        }
-    }
-
-    return $CurrentMitigations
 }
 
 <#
