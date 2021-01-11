@@ -21,6 +21,8 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 
 ### Unreleased
 
+* Update WindowsDefenderDSC Get-TargetResource to return a hashtable
+
 ### 2.0.0
 
 * Update WindowsDefenderDSC to use export current state as XML for all settings.
