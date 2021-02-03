@@ -21,6 +21,10 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 
 ### Unreleased
 
+* Update WindowsDefenderDSC place temporary xml in systemroot
+
+### 2.1.0
+
 * Update WindowsDefenderDSC Get-TargetResource to return a hashtable
 
 ### 2.0.0

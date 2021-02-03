@@ -88,14 +88,21 @@ function Set-TargetResource
         $MitigationValue
     )
 
+
+    $tempPath = $env:SystemRoot + "\Temp"
+    If(-not (Test-Path -path $tempPath))
+    {
+        New-Item -Path $tempPath -ItemType Directory
+    }
+
     $currentState = Get-TargetResource @PSBoundParameters
     if ($mitigationTarget -eq "System")
     {
-        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+        $currentPath = $tempPath + "\MitigationsCurrentSystem.xml"
     }
     else
     {
-        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+        $currentPath = $tempPath + "\MitigationsCurrent.xml"
     }
 
     [xml]$currentXml = Get-Content $currentPath
@@ -134,7 +141,7 @@ function Set-TargetResource
             $xmlsettings.IndentChars = "    "
 
             # Set the File Name Create The Document
-            $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
+            $currentPathTemp = $tempPath + "\MitigationsCurrentTemp.xml"
             $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
 
             # Write the XML Decleration and set the XSL
@@ -258,16 +265,22 @@ function Get-CurrentProcessMitigationXml
     $xmlsettings.Indent = $true
     $xmlsettings.IndentChars = "    "
 
+    $tempPath = $env:SystemRoot + "\Temp"
+    If(-not (Test-Path -path $tempPath))
+    {
+        New-Item -Path $tempPath -ItemType Directory
+    }
+
     if ($MitigationTarget -eq "System")
     {
         # Set the File Name Create The Document
-        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+        $currentPath = $tempPath + "\MitigationsCurrentSystem.xml"
         $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
     }
     else
     {
         # Set the File Name Create The Document
-        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+        $currentPath = $tempPath + "\MitigationsCurrent.xml"
         $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
     }
 
