@@ -88,98 +88,86 @@ function Set-TargetResource
         $MitigationValue
     )
 
-    $null = Invoke-Command -ScriptBlock {
-        param ($fileName)
-        $fullPowerShellExePath = "$env:SystemRoot\System32\WindowsPowershell\v1.0\powershell.exe"
-        $oldPSModulePath = $env:PSModulePath
-        try
+    $tempPath = $env:SystemRoot + "\Temp"
+    If(-not (Test-Path -path $tempPath))
+    {
+        New-Item -Path $tempPath -ItemType Directory
+    }
+
+    $currentState = Get-TargetResource @PSBoundParameters
+    if ($mitigationTarget -eq "System")
+    {
+        $currentPath = $tempPath + "\MitigationsCurrentSystem.xml"
+    }
+    else
+    {
+        $currentPath = $tempPath + "\MitigationsCurrent.xml"
+    }
+
+    [xml]$currentXml = Get-Content $currentPath
+
+    if ($mitigationTarget -eq "System")
+    {
+        if ($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
         {
-            # Set env variable to full powershell module path so that powershell can discover Get-WindowsFeature cmdlet.
-            $env:PSModulePath = "$env:SystemRoot\System32\WindowsPowershell\v1.0\Modules"
-            $tempPath = $env:SystemRoot + "\Temp"
-            If(-not (Test-Path -path $tempPath))
+            $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
+            $currentXml.Save($currentPath)
+            Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
+            Powershell.exe {Set-ProcessMitigation -PolicyFilePath $currentPath}
+        }
+    }
+    else {
+        foreach ($mitigation in $currentXml.MitigationPolicy.AppConfig)
+        {
+            if ($mitigation.Executable -eq $MitigationTarget)
             {
-                New-Item -Path $tempPath -ItemType Directory
-            }
-
-            $currentState = Get-TargetResource @PSBoundParameters
-            if ($mitigationTarget -eq "System")
-            {
-                $currentPath = $tempPath + "\MitigationsCurrentSystem.xml"
-            }
-            else
-            {
-                $currentPath = $tempPath + "\MitigationsCurrent.xml"
-            }
-
-            [xml]$currentXml = Get-Content $currentPath
-
-            if ($mitigationTarget -eq "System")
-            {
-                if ($currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
-                {
-                    $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
+               if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
+               {
+                    $mitigation.$mitigationType.$mitigationName = $mitigationValue
                     $currentXml.Save($currentPath)
                     Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-                    &$fullPowerShellExePath -command "Set-ProcessMitigation -PolicyFilePath $currentPath"
-                }
-            }
-            else {
-                foreach ($mitigation in $currentXml.MitigationPolicy.AppConfig)
-                {
-                    if ($mitigation.Executable -eq $MitigationTarget)
-                    {
-                       if ($mitigation.$mitigationType.$mitigationName -ne $mitigationValue)
-                       {
-                            $mitigation.$mitigationType.$mitigationName = $mitigationValue
-                            $currentXml.Save($currentPath)
-                            Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-                            &$fullPowerShellExePath -command "Set-ProcessMitigation -PolicyFilePath $currentPath"
-                       }
-                    }
-                }
-
-                if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
-                {
-                    # Set The Formatting
-                    $xmlsettings = New-Object System.Xml.XmlWriterSettings
-                    $xmlsettings.Indent = $true
-                    $xmlsettings.IndentChars = "    "
-        
-                    # Set the File Name Create The Document
-                    $currentPathTemp = $tempPath + "\MitigationsCurrentTemp.xml"
-                    $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
-        
-                    # Write the XML Decleration and set the XSL
-                    $xmlWriter.WriteStartDocument()
-        
-                    # Start the Root Element
-                    $xmlWriter.WriteStartElement("MitigationPolicy")
-        
-                    $xmlWriter.WriteStartElement("AppConfig")
-                    $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
-        
-                    $xmlWriter.WriteStartElement($MitigationType)
-                    $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
-                    $xmlWriter.WriteEndElement()
-        
-                    # Write end process
-                    $xmlWriter.WriteEndElement()
-        
-                    # Write end root
-                    $xmlWriter.WriteEndElement()
-        
-                    # End, Finalize and close the XML Document
-                    $xmlWriter.WriteEndDocument()
-                    $xmlWriter.Flush()
-                    $xmlWriter.Close()
-                    &$fullPowerShellExePath -command "Set-ProcessMitigation -PolicyFilePath $currentPathTemp"
-                }
+                    Powershell.exe {Set-ProcessMitigation -PolicyFilePath $currentPath}
+               }
             }
         }
-        finally
+
+
+        if($currentXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
         {
-            $env:PSModulePath = $oldPSModulePath
+            # Set The Formatting
+            $xmlsettings = New-Object System.Xml.XmlWriterSettings
+            $xmlsettings.Indent = $true
+            $xmlsettings.IndentChars = "    "
+
+            # Set the File Name Create The Document
+            $currentPathTemp = $tempPath + "\MitigationsCurrentTemp.xml"
+            $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
+
+            # Write the XML Decleration and set the XSL
+            $xmlWriter.WriteStartDocument()
+
+            # Start the Root Element
+            $xmlWriter.WriteStartElement("MitigationPolicy")
+
+            $xmlWriter.WriteStartElement("AppConfig")
+            $xmlWriter.WriteAttributeString("Executable",$mitigationTarget)
+
+            $xmlWriter.WriteStartElement($MitigationType)
+            $xmlWriter.WriteAttributeString($MitigationName,$MitigationValue)
+            $xmlWriter.WriteEndElement()
+
+            # Write end process
+            $xmlWriter.WriteEndElement()
+
+            # Write end root
+            $xmlWriter.WriteEndElement()
+
+            # End, Finalize and close the XML Document
+            $xmlWriter.WriteEndDocument()
+            $xmlWriter.Flush()
+            $xmlWriter.Close()
+
+            Powershell.exe {Set-ProcessMitigation -PolicyFilePath $currentPathTemp}
         }
     }
 }
@@ -469,30 +457,15 @@ function Get-CurrentProcessMitigationSettings
 {
     [CmdletBinding()]
 
-    # This command needs to be run through full PowerShell rather than through PowerShell Core which is what the Policy engine runs
-    $null = Invoke-Command -ScriptBlock {
-        param ($fileName)
-        $fullPowerShellExePath = "$env:SystemRoot\System32\WindowsPowershell\v1.0\powershell.exe"
-        $oldPSModulePath = $env:PSModulePath
-        try
-        {
-            # Set env variable to full powershell module path so that powershell can discover Get-WindowsFeature cmdlet.
-            $env:PSModulePath = "$env:SystemRoot\System32\WindowsPowershell\v1.0\Modules"
-            $currentMitigation = @()
-            [hashtable[]]$resultCurrentMitigations = @()
-            if ($mitigationTarget -eq "System")
-            {
-                $currentMitigation = &$fullPowerShellExePath -command "Get-ProcessMitigation -System"
-            }
-            else
-            {
-                $currentMitigation = &$fullPowerShellExePath -command "Get-ProcessMitigation"
-            }
-        }
-        finally
-        {
-            $env:PSModulePath = $oldPSModulePath
-        }
+    $currentMitigation = @()
+    [hashtable[]]$resultCurrentMitigations = @()
+    if ($mitigationTarget -eq "System")
+    {
+        $currentMitigation = Powershell.exe {Get-ProcessMitigation -System}
+    }
+    else
+    {
+        $currentMitigation = Powershell.exe {Get-ProcessMitigation}
     }
 
     foreach ($mitigation in $currentMitigation)
