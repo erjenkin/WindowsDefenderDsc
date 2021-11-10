@@ -22,6 +22,7 @@ Please check out common DSC Resources [contributing guidelines](https://github.c
 ### Unreleased
 
 * Update WindowsDefenderDSC place temporary xml in systemroot
+* Update WindowsDefenderDSC to work with PowerShell7
 
 ### 2.1.0
 

@@ -8,7 +8,7 @@
 
 @{
     # Version number of this module.
-    ModuleVersion     = '2.1.1'
+    ModuleVersion     = '2.2.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop')
@@ -17,7 +17,7 @@
     GUID              = 'b6a20f15-7090-4aa1-a0be-921b5e8eb50b'
 
     # Author of this module
-    Author            = 'Jason Walker'
+    Author            = 'Eric Jenkins'
 
     # Company or vendor of this module
     CompanyName       = 'Microsoft Corporation'

@@ -88,7 +88,6 @@ function Set-TargetResource
         $MitigationValue
     )
 
-
     $tempPath = $env:SystemRoot + "\Temp"
     If(-not (Test-Path -path $tempPath))
     {
@@ -114,7 +113,7 @@ function Set-TargetResource
             $currentXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName = $mitigationValue
             $currentXml.Save($currentPath)
             Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-            Set-ProcessMitigation -PolicyFilePath $currentPath
+            Powershell.exe {Set-ProcessMitigation -PolicyFilePath $currentPath}
         }
     }
     else {
@@ -127,7 +126,7 @@ function Set-TargetResource
                     $mitigation.$mitigationType.$mitigationName = $mitigationValue
                     $currentXml.Save($currentPath)
                     Write-Verbose -Message ($script:localizedData.policySetStatement -f $mitigationName, $mitigationValue)
-                    Set-ProcessMitigation -PolicyFilePath $currentPath
+                    Powershell.exe {Set-ProcessMitigation -PolicyFilePath $currentPath}
                }
             }
         }
@@ -168,8 +167,7 @@ function Set-TargetResource
             $xmlWriter.Flush()
             $xmlWriter.Close()
 
-
-            Set-ProcessMitigation -PolicyFilePath $currentPathTemp
+            Powershell.exe {Set-ProcessMitigation -PolicyFilePath $currentPathTemp}
         }
     }
 }
@@ -463,11 +461,11 @@ function Get-CurrentProcessMitigationSettings
     [hashtable[]]$resultCurrentMitigations = @()
     if ($mitigationTarget -eq "System")
     {
-        $currentMitigation = Get-ProcessMitigation -System
+        $currentMitigation = Powershell.exe {Get-ProcessMitigation -System}
     }
     else
     {
-        $currentMitigation = Get-ProcessMitigation
+        $currentMitigation = Powershell.exe {Get-ProcessMitigation}
     }
 
     foreach ($mitigation in $currentMitigation)
