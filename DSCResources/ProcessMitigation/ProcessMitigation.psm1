@@ -41,13 +41,17 @@ function Get-TargetResource
         $MitigationValue
     )
 
+    $resultCurrentMitigations = Get-CurrentProcessMitigationSettings
 
-    $currentMitigations = Get-CurrentProcessMitigation
-    $currentMitigationsConverted = Convert-CurrentMitigation -CurrentMitigations $currentMitigations
-    $currentPath = Get-CurrentProcessMitigationXml -CurrentMitigations $currentMitigationsConverted
-    [xml] $returnValue = Get-Content $currentPath
+    $returnVariable = @{
 
-    return $returnValue
+        MitigationTarget = $mitigationTarget
+        MitigationType   = $mitigationType
+        MitigationName   = $mitigationName
+        MitigationValue  = $resultCurrentMitigations.$mitigationTarget.$mitigationType.$mitigationName
+    }
+
+    return $returnVariable
 }
 
 <#
@@ -84,14 +88,21 @@ function Set-TargetResource
         $MitigationValue
     )
 
+
+    $tempPath = $env:SystemRoot + "\Temp"
+    If(-not (Test-Path -path $tempPath))
+    {
+        New-Item -Path $tempPath -ItemType Directory
+    }
+
     $currentState = Get-TargetResource @PSBoundParameters
     if ($mitigationTarget -eq "System")
     {
-        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+        $currentPath = $tempPath + "\MitigationsCurrentSystem.xml"
     }
     else
     {
-        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+        $currentPath = $tempPath + "\MitigationsCurrent.xml"
     }
 
     [xml]$currentXml = Get-Content $currentPath
@@ -130,7 +141,7 @@ function Set-TargetResource
             $xmlsettings.IndentChars = "    "
 
             # Set the File Name Create The Document
-            $currentPathTemp = $env:TEMP + "\MitigationsCurrentTemp.xml"
+            $currentPathTemp = $tempPath + "\MitigationsCurrentTemp.xml"
             $xmlWriter = [System.XML.XmlWriter]::Create($currentPathTemp, $xmlsettings)
 
             # Write the XML Decleration and set the XSL
@@ -199,11 +210,12 @@ function Test-TargetResource
     )
 
     $inDesiredState = $true
-    $currentState = Get-TargetResource @PSBoundParameters
+    $currentPath = Get-CurrentProcessMitigationXml
+    [xml] $currentStateXml = Get-Content $currentPath
 
     if ($mitigationTarget -eq "System")
     {
-        if ($currentState.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
+        if ($currentStateXml.MitigationPolicy.SystemConfig.$MitigationType.$mitigationName -ne $mitigationValue)
         {
             Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
             $inDesiredState = $false
@@ -211,7 +223,7 @@ function Test-TargetResource
     }
     else
     {
-        foreach ($mitigation in $currentState.MitigationPolicy.AppConfig)
+        foreach ($mitigation in $currentStateXml.MitigationPolicy.AppConfig)
         {
             if ($mitigation.Executable -eq $MitigationTarget)
             {
@@ -223,7 +235,7 @@ function Test-TargetResource
             }
         }
 
-        if ($currentState.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
+        if ($currentStateXml.MitigationPolicy.AppConfig.Executable -notcontains $MitigationTarget)
         {
             Write-Verbose -Message ($script:localizedData.policyNotInDesiredState -f $mitigationName, $mitigationValue)
             $inDesiredState = $false
@@ -231,195 +243,6 @@ function Test-TargetResource
     }
 
     return $inDesiredState
-}
-
-<#
-    .SYNOPSIS
-        Gets the current state of a process mitigation via Get-ProcessMitigation commands and stores in a hashtable
-    .DESCRIPTION
-        The Get-ProcessMitigation command returns several different object types that must be converted to a hashtable
-        for further processing.
-#>
-function Get-CurrentProcessMitigation
-{
-    [CmdletBinding()]
-    [OutputType([System.Collections.Hashtable])]
-
-    $currentMitigation = @()
-    [hashtable[]]$resultCurrentMitigations = @()
-    if ($mitigationTarget -eq "System")
-    {
-        $currentMitigation = Get-ProcessMitigation -System
-    }
-    else
-    {
-        $currentMitigation = Get-ProcessMitigation
-    }
-
-    foreach ($mitigation in $currentMitigation)
-    {
-        $resultCurrentMitigations +=  @{
-            $mitigation.Processname = @{
-                DEP = @{
-                    EmulateAtlThunks = $mitigation.Dep.EmulateAtlThunks
-                    OverrideDEP      = $mitigation.Dep.OverrideDEP
-                    Enable           = $mitigation.Dep.Enable
-                }
-                ASLR = @{
-                    OverrideForceRelocateImages = $mitigation.Aslr.OverrideForceRelocateImages
-                    OverrideBottomUp            = $mitigation.Aslr.OverrideBottomUp
-                    OverrideHighEntropy         = $mitigation.Aslr.OverrideHighEntropy
-                    ForceRelocateImages         = $mitigation.Aslr.ForceRelocateImages
-                    RequireInfo                 = $mitigation.Aslr.RequireInfo
-                    BottomUp                    = $mitigation.Aslr.BottomUp
-                    HighEntropy                 = $mitigation.Aslr.HighEntropy
-                }
-                StrictHandle = @{
-                    Enable               = $mitigation.StrictHandle.Enable
-                    OverrideStrictHandle = $mitigation.StrictHandle.OverrideStrictHandle
-                }
-                SystemCalls = @{
-                    OverrideSystemCall       = $mitigation.SystemCall.OverrideSystemCall
-                    DisableWin32kSystemCalls = $mitigation.SystemCall.DisableWin32kSystemCalls
-                    Audit                    = $mitigation.SystemCall.Audit
-                }
-                ExtensionPoints = @{
-                    DisableExtensionPoints  = $mitigation.ExtensionPoint.DisableExtensionPoints
-                    OverrideExtensionPoint = $mitigation.ExtensionPoint.OverrideExtensionPoint
-                }
-                DynamicCode = @{
-                    OverrideDynamicCode  = $mitigation.DynamicCode.OverrideDynamicCode
-                    BlockDynamicCode     = $mitigation.DynamicCode.BlockDynamicCode
-                    AllowThreadsToOptOut = $mitigation.DynamicCode.AllowThreadsToOptOut
-                    Audit                = $mitigation.DynamicCode.Audit
-                }
-               ControlFlowGuard = @{
-                    OverrideCFG            = $mitigation.CFG.OverrideCFG
-                    OverrideStrictCFG      = $mitigation.CFG.OverrideStrictCFG
-                    Enable                 = $mitigation.CFG.Enable
-                    SuppressExports        = $mitigation.CFG.SuppressExports
-                    StrictControlFlowGuard = $mitigation.CFG.StrictControlFlowGuard
-                }
-                SignedBinaries = @{
-                    MicrosoftSignedOnly                    = $mitigation.BinarySignature.MicrosoftSignedOnly
-                    AllowStoreSignedBinaries               = $mitigation.BinarySignature.AllowStoreSignedBinaries
-                    EnforceModuleDependencySigning         = $mitigation.BinarySignature.EnforceModuleDependencySigning
-                    AuditMicrosoftSignedOnly               = $mitigation.BinarySignature.Audit
-                    AuditStoreSigned                       = $mitigation.BinarySignature.AuditStoreSigned
-                    AuditEnforceModuleDependencySigning    = $mitigation.BinarySignature.AuditEnforceModuleDependencySigning
-                    OverrideMicrosoftSignedOnly            = $mitigation.BinarySignature.OverrideMicrosoftSignedOnly
-                    OverrideEnforceModuleDependencySigning = $mitigation.BinarySignature.OverrideEnforceModuleDependencySigning
-                }
-                Fonts = @{
-                    DisableNonSystemFonts = $mitigation.FontDisable.DisableNonSystemFonts
-                    Audit                 = $mitigation.FontDisable.Audit
-                    OverrideFontDisable   = $mitigation.FontDisable.OverrideFontDisable
-                }
-                ImageLoad = @{
-                    AuditLowLabelImageLoads       = $mitigation.ImageLoad.AuditLowLabelImageLoads
-                    AuditPreferSystem32           = $mitigation.ImageLoad.AuditPreferSystem32
-                    AuditRemoteImageLoads         = $mitigation.ImageLoad.AuditRemoteImageLoads
-                    BlockLowLabelImageLoads       = $mitigation.ImageLoad.BlockLowLabelImageLoads
-                    BlockRemoteImageLoads         = $mitigation.ImageLoad.BlockRemoteImageLoads
-                    OverrideBlockLowLabel         = $mitigation.ImageLoad.OverrideBlockLowLabel
-                    OverrideBlockRemoteImageLoads = $mitigation.ImageLoad.OverrideBlockRemoteImageLoads
-                    OverridePreferSystem32        = $mitigation.ImageLoad.OverridePreferSystem32
-                    PreferSystem32                = $mitigation.ImageLoad.PreferSystem32
-                }
-                PayLoad = @{
-                    AuditEnableExportAddressFilter        = $mitigation.Payload.AuditEnableExportAddressFilter
-                    AuditEnableExportAddressFilterPlus    = $mitigation.Payload.AuditEnableExportAddressFilterPlus
-                    AuditEnableImportAddressFilter        = $mitigation.Payload.AuditEnableImportAddressFilter
-                    AuditEnableRopCallerCheck             = $mitigation.Payload.AuditEnableRopCallerCheck
-                    AuditEnableRopSimExec                 = $mitigation.Payload.AuditEnableRopSimExec
-                    AuditEnableRopStackPivot              = $mitigation.Payload.AuditEnableRopStackPivot
-                    EAFModules                            = $mitigation.Payload.EAFModules
-                    EnableExportAddressFilter             = $mitigation.Payload.EnableExportAddressFilter
-                    EnableExportAddressFilterPlus         = $mitigation.Payload.EnableExportAddressFilterPlus
-                    EnableImportAddressFilter             = $mitigation.Payload.EnableImportAddressFilter
-                    EnableRopCallerCheck                  = $mitigation.Payload.EnableRopCallerCheck
-                    EnableRopSimExec                      = $mitigation.Payload.EnableRopSimExec
-                    EnableRopStackPivot                   = $mitigation.Payload.EnableRopStackPivot
-                    OverrideEnableExportAddressFilter     = $mitigation.Payload.OverrideEnableExportAddressFilter
-                    OverrideEnableExportAddressFilterPlus = $mitigation.Payload.OverrideEnableExportAddressFilterPlus
-                    OverrideEnableImportAddressFilter     = $mitigation.Payload.OverrideEnableImportAddressFilter
-                    OverrideEnableRopCallerCheck          = $mitigation.Payload.OverrideEnableRopCallerCheck
-                    OverrideEnableRopSimExec              = $mitigation.Payload.OverrideEnableRopSimExec
-                    OverrideEnableRopStackPivot           = $mitigation.Payload.OverrideEnableRopStackPivot
-                }
-                SEHOP = @{
-                    Audit         = $mitigation.SEHOP.Audit
-                    Enable        = $mitigation.SEHOP.Enable
-                    OverrideSEHOP = $mitigation.SEHOP.OverrideSEHOP
-                    TelemetryOnly = $mitigation.SEHOP.TelemetryOnly
-                }
-                Heap = @{
-                    OverrideHeap     = $mitigation.Heap.OverrideHeap
-                    TerminateOnError = $mitigation.Heap.TerminateOnError
-                }
-                ChildProcess = @{
-                    Audit                        = $mitigation.ChildProcess.Audit
-                    DisallowChildProcessCreation = $mitigation.ChildProcess.DisallowChildProcessCreation
-                    OverrideChildProcess         = $mitigation.ChildProcess.OverrideChildProcess
-                }
-            }
-        }
-    }
-
-    return $resultCurrentMitigations
-}
-
-<#
-    .SYNOPSIS
-        Converts the the process mitigation found in Get-CurrentProcessMitigation
-    .DESCRIPTION
-        The Get-CurrentProcessMitigation command returns values of ON,OFF,NOTSET ,which must be converted to true/false for processing via xml.
-#>
-function Convert-CurrentMitigation
-{
-    [CmdletBinding()]
-    [OutputType([xml])]
-
-    $currentMitigationsConverted = @()
-    $currentMitigationsConverted = Get-CurrentProcessMitigation
-    $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
-    foreach ($mitigationTarget in  $CurrentMitigationsConverted)
-    {
-        if($mitigationTarget.Keys -eq "System")
-        {
-            $target = $currentMitigationsConverted.System
-        }
-        else
-        {
-            $targetName = $mitigationTarget.Keys
-            $target = $currentMitigationsConverted.$targetName
-        }
-
-        foreach ($mitigationType in $mitigationTypes)
-        {
-            [string[]] $mitigationKeys = $target.$mitigationType.Keys
-            foreach ($mitigationKey in $mitigationKeys)
-            {
-                $targetKey = $target.$mitigationType.$mitigationKey
-                if ($targetKey -match "ON|True")
-                {
-                    $target.$mitigationType.$mitigationKey =  "true"
-                }
-
-                if ($targetKey -match "False|OFF")
-                {
-                    $target.$mitigationType.$mitigationKey =  "false"
-                }
-
-                if ($targetKey -match 'NOTSET' -or $targetKey.count -lt 1)
-                {
-                    $target.$mitigationType.Remove($mitigationkey)
-                }
-            }
-        }
-    }
-
-    return $currentMitigationsConverted
 }
 
 <#
@@ -434,28 +257,30 @@ function Get-CurrentProcessMitigationXml
 {
     [CmdletBinding()]
     [OutputType([xml])]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [object[]]
-        $CurrentMitigationsConverted
-    )
+
+    $resultCurrentMitigations = Get-CurrentProcessMitigationSettings
 
     # Set The Formatting
     $xmlsettings = New-Object System.Xml.XmlWriterSettings
     $xmlsettings.Indent = $true
     $xmlsettings.IndentChars = "    "
 
+    $tempPath = $env:SystemRoot + "\Temp"
+    If(-not (Test-Path -path $tempPath))
+    {
+        New-Item -Path $tempPath -ItemType Directory
+    }
+
     if ($MitigationTarget -eq "System")
     {
         # Set the File Name Create The Document
-        $currentPath = $env:TEMP + "\MitigationsCurrentSystem.xml"
+        $currentPath = $tempPath + "\MitigationsCurrentSystem.xml"
         $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
     }
     else
     {
         # Set the File Name Create The Document
-        $currentPath = $env:TEMP + "\MitigationsCurrent.xml"
+        $currentPath = $tempPath + "\MitigationsCurrent.xml"
         $xmlWriter = [System.XML.XmlWriter]::Create($currentPath, $xmlsettings)
     }
 
@@ -465,7 +290,7 @@ function Get-CurrentProcessMitigationXml
     # Start the Root Element
     $xmlWriter.WriteStartElement("MitigationPolicy")
 
-    foreach($mitigation in $CurrentMitigationsConverted)
+    foreach($mitigation in $resultCurrentMitigations)
     {
         if ($MitigationTarget -eq "System")
         {
@@ -622,4 +447,175 @@ function Get-CurrentProcessMitigationXml
     $xmlWriter.Close()
 
     return $currentPath
+}
+
+<#
+    .SYNOPSIS
+        Retrieves the current mitigation settings from the system
+    .DESCRIPTION
+        This function gets the current settings from the system and converts them into values that are required for the process mitigation xml.
+#>
+function Get-CurrentProcessMitigationSettings
+{
+    [CmdletBinding()]
+
+    $currentMitigation = @()
+    [hashtable[]]$resultCurrentMitigations = @()
+    if ($mitigationTarget -eq "System")
+    {
+        $currentMitigation = Get-ProcessMitigation -System
+    }
+    else
+    {
+        $currentMitigation = Get-ProcessMitigation
+    }
+
+    foreach ($mitigation in $currentMitigation)
+    {
+        $resultCurrentMitigations +=  @{
+            $mitigation.Processname = @{
+                DEP = @{
+                    EmulateAtlThunks = $mitigation.Dep.EmulateAtlThunks
+                    OverrideDEP      = $mitigation.Dep.OverrideDEP
+                    Enable           = $mitigation.Dep.Enable
+                }
+                ASLR = @{
+                    OverrideForceRelocateImages = $mitigation.Aslr.OverrideForceRelocateImages
+                    OverrideBottomUp            = $mitigation.Aslr.OverrideBottomUp
+                    OverrideHighEntropy         = $mitigation.Aslr.OverrideHighEntropy
+                    ForceRelocateImages         = $mitigation.Aslr.ForceRelocateImages
+                    RequireInfo                 = $mitigation.Aslr.RequireInfo
+                    BottomUp                    = $mitigation.Aslr.BottomUp
+                    HighEntropy                 = $mitigation.Aslr.HighEntropy
+                }
+                StrictHandle = @{
+                    Enable               = $mitigation.StrictHandle.Enable
+                    OverrideStrictHandle = $mitigation.StrictHandle.OverrideStrictHandle
+                }
+                SystemCalls = @{
+                    OverrideSystemCall       = $mitigation.SystemCall.OverrideSystemCall
+                    DisableWin32kSystemCalls = $mitigation.SystemCall.DisableWin32kSystemCalls
+                    Audit                    = $mitigation.SystemCall.Audit
+                }
+                ExtensionPoints = @{
+                    DisableExtensionPoints  = $mitigation.ExtensionPoint.DisableExtensionPoints
+                    OverrideExtensionPoint = $mitigation.ExtensionPoint.OverrideExtensionPoint
+                }
+                DynamicCode = @{
+                    OverrideDynamicCode  = $mitigation.DynamicCode.OverrideDynamicCode
+                    BlockDynamicCode     = $mitigation.DynamicCode.BlockDynamicCode
+                    AllowThreadsToOptOut = $mitigation.DynamicCode.AllowThreadsToOptOut
+                    Audit                = $mitigation.DynamicCode.Audit
+                }
+                ControlFlowGuard = @{
+                    OverrideCFG            = $mitigation.CFG.OverrideCFG
+                    OverrideStrictCFG      = $mitigation.CFG.OverrideStrictCFG
+                    Enable                 = $mitigation.CFG.Enable
+                    SuppressExports        = $mitigation.CFG.SuppressExports
+                    StrictControlFlowGuard = $mitigation.CFG.StrictControlFlowGuard
+                }
+                SignedBinaries = @{
+                    MicrosoftSignedOnly                    = $mitigation.BinarySignature.MicrosoftSignedOnly
+                    AllowStoreSignedBinaries               = $mitigation.BinarySignature.AllowStoreSignedBinaries
+                    EnforceModuleDependencySigning         = $mitigation.BinarySignature.EnforceModuleDependencySigning
+                    AuditMicrosoftSignedOnly               = $mitigation.BinarySignature.Audit
+                    AuditStoreSigned                       = $mitigation.BinarySignature.AuditStoreSigned
+                    AuditEnforceModuleDependencySigning    = $mitigation.BinarySignature.AuditEnforceModuleDependencySigning
+                    OverrideMicrosoftSignedOnly            = $mitigation.BinarySignature.OverrideMicrosoftSignedOnly
+                    OverrideEnforceModuleDependencySigning = $mitigation.BinarySignature.OverrideEnforceModuleDependencySigning
+                }
+                Fonts = @{
+                    DisableNonSystemFonts = $mitigation.FontDisable.DisableNonSystemFonts
+                    Audit                 = $mitigation.FontDisable.Audit
+                    OverrideFontDisable   = $mitigation.FontDisable.OverrideFontDisable
+                }
+                ImageLoad = @{
+                    AuditLowLabelImageLoads       = $mitigation.ImageLoad.AuditLowLabelImageLoads
+                    AuditPreferSystem32           = $mitigation.ImageLoad.AuditPreferSystem32
+                    AuditRemoteImageLoads         = $mitigation.ImageLoad.AuditRemoteImageLoads
+                    BlockLowLabelImageLoads       = $mitigation.ImageLoad.BlockLowLabelImageLoads
+                    BlockRemoteImageLoads         = $mitigation.ImageLoad.BlockRemoteImageLoads
+                    OverrideBlockLowLabel         = $mitigation.ImageLoad.OverrideBlockLowLabel
+                    OverrideBlockRemoteImageLoads = $mitigation.ImageLoad.OverrideBlockRemoteImageLoads
+                    OverridePreferSystem32        = $mitigation.ImageLoad.OverridePreferSystem32
+                    PreferSystem32                = $mitigation.ImageLoad.PreferSystem32
+                }
+                PayLoad = @{
+                    AuditEnableExportAddressFilter        = $mitigation.Payload.AuditEnableExportAddressFilter
+                    AuditEnableExportAddressFilterPlus    = $mitigation.Payload.AuditEnableExportAddressFilterPlus
+                    AuditEnableImportAddressFilter        = $mitigation.Payload.AuditEnableImportAddressFilter
+                    AuditEnableRopCallerCheck             = $mitigation.Payload.AuditEnableRopCallerCheck
+                    AuditEnableRopSimExec                 = $mitigation.Payload.AuditEnableRopSimExec
+                    AuditEnableRopStackPivot              = $mitigation.Payload.AuditEnableRopStackPivot
+                    EAFModules                            = $mitigation.Payload.EAFModules
+                    EnableExportAddressFilter             = $mitigation.Payload.EnableExportAddressFilter
+                    EnableExportAddressFilterPlus         = $mitigation.Payload.EnableExportAddressFilterPlus
+                    EnableImportAddressFilter             = $mitigation.Payload.EnableImportAddressFilter
+                    EnableRopCallerCheck                  = $mitigation.Payload.EnableRopCallerCheck
+                    EnableRopSimExec                      = $mitigation.Payload.EnableRopSimExec
+                    EnableRopStackPivot                   = $mitigation.Payload.EnableRopStackPivot
+                    OverrideEnableExportAddressFilter     = $mitigation.Payload.OverrideEnableExportAddressFilter
+                    OverrideEnableExportAddressFilterPlus = $mitigation.Payload.OverrideEnableExportAddressFilterPlus
+                    OverrideEnableImportAddressFilter     = $mitigation.Payload.OverrideEnableImportAddressFilter
+                    OverrideEnableRopCallerCheck          = $mitigation.Payload.OverrideEnableRopCallerCheck
+                    OverrideEnableRopSimExec              = $mitigation.Payload.OverrideEnableRopSimExec
+                    OverrideEnableRopStackPivot           = $mitigation.Payload.OverrideEnableRopStackPivot
+                }
+                SEHOP = @{
+                    Audit         = $mitigation.SEHOP.Audit
+                    Enable        = $mitigation.SEHOP.Enable
+                    OverrideSEHOP = $mitigation.SEHOP.OverrideSEHOP
+                    TelemetryOnly = $mitigation.SEHOP.TelemetryOnly
+                }
+                Heap = @{
+                    OverrideHeap     = $mitigation.Heap.OverrideHeap
+                    TerminateOnError = $mitigation.Heap.TerminateOnError
+                }
+                ChildProcess = @{
+                    Audit                        = $mitigation.ChildProcess.Audit
+                    DisallowChildProcessCreation = $mitigation.ChildProcess.DisallowChildProcessCreation
+                    OverrideChildProcess         = $mitigation.ChildProcess.OverrideChildProcess
+                }
+            }
+        }
+    }
+
+    $mitigationTypes = @('ControlFlowGuard','SystemCalls','StrictHandle','DynamicCode','PayLoad','ASLR','Heap','Fonts','SignedBinaries','ImageLoad','SEHOP','ExtensionPoints','DEP','ChildProcess')
+    foreach ($target in  $resultCurrentMitigations.GetEnumerator())
+    {
+        if($target.Keys -eq "System")
+        {
+            $target = $resultCurrentMitigations.System
+        }
+        else
+        {
+            $targetName = $target.Keys
+            $target = $resultCurrentMitigations.$targetName
+        }
+
+        foreach ($mitigationTypeName in $mitigationTypes)
+        {
+            [string[]] $mitigationKeys = $target.$mitigationTypeName.Keys
+            foreach ($mitigationKey in $mitigationKeys)
+            {
+                $targetKey = $target.$mitigationTypeName.$mitigationKey
+                if ($targetKey -match "ON|True")
+                {
+                    $target.$mitigationTypeName.$mitigationKey =  "true"
+                }
+
+                if ($targetKey -match "False|OFF")
+                {
+                    $target.$mitigationTypeName.$mitigationKey =  "false"
+                }
+
+                if ($targetKey -match 'NOTSET' -or $targetKey.count -lt 1)
+                {
+                    $target.$mitigationTypeName.Remove($mitigationkey)
+                }
+            }
+        }
+    }
+
+    return $resultCurrentMitigations
 }
